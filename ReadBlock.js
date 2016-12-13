@@ -1,8 +1,5 @@
 ( function ( window ){
 
-	// var Fragment = require( 'Fragment' );
-
-
 	"use strict";
 
 	var wordRegex = /([^\s\-\—\/]+[\-\—\/]?|[\r\n]+)/g;
@@ -16,7 +13,7 @@
 	var c = '[^'+vowels+']';
 	var v = '['+vowels+']';
 	var vccv = new RegExp('('+v+c+')('+c+v+')', 'g');
-	var simple = new RegExp('(.{2,4}'+v+')'+'('+c+')', 'g');
+	var simple = new RegExp('(.{2,4}'+v+')'+'('+c+')', 'g');  // Currently not used
 	var puncSplit = /(.+?)(\.[^\w]\b|,[^\w]\b)(.+?)/;
 
 	var ReadBlock = function ( val ) {

@@ -128,7 +128,8 @@
 	var p = Read.prototype;
 
 	p._display = function () {
-		this._currentWord = this._block.getWord();
+		this._currentWord = this._block.next();
+		// this._currentWord = this._block.getWord();
 		if (this._currentWord) {
 			this._showWord();
 
@@ -340,13 +341,13 @@
 			$('.__read_loading').hide();
 			this.pause();
 			this.restart();
-			this._block = new ReadBlock(val);
-			this._currentWord = this._block.getWord();
+			this._block = new Queue(val);
+			// this._currentWord = this._block.getWord();
 		}
 	};
 
 	p._next = function() {
-		this._block.next();
+		// this._block.next();
 		this._display();
 	};
 
@@ -457,7 +458,7 @@
 				this._slowStartCount = this._options.slowStartCount;
 			}
 			this._block.restart();
-			this._currentWord = this._block.getWord();
+			// this._currentWord = this._block.getWord();
 			this._isEnded = false;
 			this.play();
 		}

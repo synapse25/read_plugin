@@ -19,7 +19,7 @@
                 "jquery.js",
                 "jquery.nouislider.js",
                 "lib/Fragment.js",
-                "ReadBlock.js",
+                "lib/Queue.js",
                 "Read.js",
 				"main.js"
             ],
