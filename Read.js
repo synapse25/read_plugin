@@ -154,8 +154,9 @@
 
 	p._showWord = function () {
 		if (this._displayElement) {
-			var word = this._currentWord.val;
+			var word = this._currentWord.chars;
 
+			// TODO: Is this necessary?
 			var before = word.substr(0, this._currentWord.index);
 			var letter = word.substr(this._currentWord.index, 1);
 
@@ -163,8 +164,8 @@
 			var $before = this._options.element.find('.__read_before').html(before).css("opacity","0");
 			var $letter = this._options.element.find('.__read_letter').html(letter).css("opacity","0");
 
-			if (!this._currentWord.val.match(whiteSpace)){
-				this._displayElement.html(this._currentWord.val);
+			if (!this._currentWord.chars.match(whiteSpace)){
+				this._displayElement.html(this._currentWord.chars);
 			}
 		}
 
