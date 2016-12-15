@@ -20,6 +20,7 @@
                 "jquery.nouislider.js",
                 "lib/Fragment.js",
                 "lib/Queue.js",
+                "lib/ReadTimer.js",
                 "Read.js",
 				"main.js"
             ],
