@@ -13,7 +13,7 @@
     "content_scripts": [
         {
             "css": [
-                "main.css"
+                "lib/readerly-main.css"
             ],
             "js": [
                 "jquery.js",
@@ -21,7 +21,7 @@
                 "lib/Fragment.js",
                 "lib/Queue.js",
                 "lib/ReaderlyTimer.js",
-                "Read.js",
+                "lib/ReaderlyDisplay.js",
 				"main.js"
             ],
             "matches": [

@@ -1,6 +1,12 @@
+/* main.js
+* 
+* TODO:
+* - Cache whole page text when possible/read
+*/
+
 (function(){
 
-	var r; // Read Object
+	// var r; // Read Object
 	var readOptions = {
 		"wpm": 300,
 		"slowStartCount": 5,
@@ -10,38 +16,51 @@
 		"longWordDelay": 1.4
 	};
 
+	// var Queue 	= window.Queue 	 = require('lib/Queue.js'),
+	// 	Timer 	= window.Timer 	 = require('lib/ReaderlyTimer.js'),
+	// 	Display = window.Display = require('lib/ReaderlyDisplay.js');
+
+	// var queue = new require('lib/Queue.js')();
+
+	queue 		= new Queue();
+	timer 		= new ReaderlyTimer( readOptions );
+	mainDisplay = new ReaderlyDisplay( timer );
+
+	$(timer).on( 'starting', function showLoading() {
+		mainDisplay.wait();
+	})
+
+
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
-		switch (request.functiontoInvoke) {
-			case "readSelectedText":
-				// getReadOptions();
-				playReadContent( request.selectedText );
-				break;
-			case "readFullPage":
-				// getReadOptions();
-				var getArticle = $.get( 'https://readparser.herokuapp.com/?url=' + document.URL );
-				getArticle.success(function( result ) {
-					playReadContent( result );
-				}).error(function( jqXHR, textStatus, errorThrown ) {
-					var text = '';
-					var elements = $('p, li, h1, h2, h3, h4, h5, h6, span, pre');
-					elements.each(function(index, element) {
-						element = $(element);
-						var elementText = element
-							.clone()
-							.children('sup')
-							.remove()
-							.end()
-							.text()
-							.trim();
-						if (elementText.length >= 60)
-							if (!(element.tagName === 'LI' && elementText.includes('    ')))
-								text += " " + elementText;
-					});
-					playReadContent(text);
-				});
-				break;
-			default:
-				break;
+
+		mainDisplay.show();
+		mainDisplay.wait();
+
+		var func = request.functiontoInvoke;
+		if ( func === "readSelectedText" ) {
+			playReadContent( request.selectedText );
+		} else if ( func === "readFullPage" ) {
+			var getArticle = $.get( 'https://readparser.herokuapp.com/?url=' + document.URL );
+			getArticle.success(function( result ) {
+				playReadContent( result );
+			}).error(function( jqXHR, textStatus, errorThrown ) {
+				var text = '';
+				var elements = $('p, li, h1, h2, h3, h4, h5, h6, span, pre');
+				elements.each(function(index, element) {
+					element = $(element);
+					var elementText = element
+						.clone()
+						.children('sup')
+						.remove()
+						.end()
+						.text()
+						.trim();
+					if (elementText.length >= 60)
+						if (!(element.tagName === 'LI' && elementText.includes('    ')))
+							text += " " + elementText;
+				});  // end for each desired element
+				playReadContent(text);
+			});  // end getArticle
 		}
 	});
 
@@ -76,12 +95,12 @@
 	});
 
 	function setReadOptions ( myOptions ) {
-		readOptions = $.extend( {}, readOptions, myOptions );
-		chrome.storage.sync.clear(function () {
-			chrome.storage.sync.set(readOptions, function() {
-				//console.log('[READ] set:', readOptions);
-			});
-		});
+		// readOptions = $.extend( {}, readOptions, myOptions );
+		// chrome.storage.sync.clear(function () {
+		// 	chrome.storage.sync.set(readOptions, function() {
+		// 		//console.log('[READ] set:', readOptions);
+		// 	});
+		// });
 	}
 
 	// function getReadOptions () {
@@ -93,14 +112,19 @@
 	// }
 
 	function playReadContent ( text ) {
-		chrome.storage.sync.get(null, function ( myOptions ) {
-			readOptions = $.extend( {}, readOptions, myOptions );
-			//console.log('[READ] get:', readOptions);
-			r = new Read ( readOptions );
+		// chrome.storage.sync.get(null, function ( myOptions ) {
+		// 	readOptions = $.extend( {}, readOptions, myOptions );
+		// 	//console.log('[READ] get:', readOptions);
+		// 	r = new Read ( readOptions );
 
-			r.setText(text);
-			r.play();
-		});
+		// 	r.setText(text);
+		// 	r.play();
+		// });
+
+		queue.process( text );
+		timer.start( queue );
+
+		return true;
 	}
 
 })();

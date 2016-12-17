@@ -145,7 +145,6 @@
 			time = time * this._slowStartCount;
 
 			this._timer = setTimeout($.proxy(this._next, this),time);
-			// console.log('original:', this._timer);
 		} else {
 			this.clearDisplay();
 			this._isPlaying = false;
@@ -343,11 +342,11 @@
 			this.pause();
 			this.restart();
 			this._block = new Queue(val);
-			var test = ReadTimer( this._options );
-			console.log( test.start( this._block ) );
-			// console.log( test.pause() );
-			$(test).on('loopEnd', function (evnt, timer) { timer.pause() })
-			// this._currentWord = this._block.getWord();
+			// var test = ReaderlyTimer( this._options );
+			// // console.log( test.start( this._block ) );
+			// // // console.log( test.pause() );
+			// $(test).on('loopEnd', function (evnt, timer) { console.log(timer); timer.pause() })
+			// // // this._currentWord = this._block.getWord();
 		}
 	};
 
