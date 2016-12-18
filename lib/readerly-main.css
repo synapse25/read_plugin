@@ -1,17 +1,22 @@
 /*readerly-main.css*/
 
 /*
-'<div class="__rdly">\
-	<div class="__rdly-progress"></div>\
+'<div id="__rdly">\
+	<div class="__rdly-above"></div>\
 	<div class="__rdly-bar">\
 		<div class="__rdly-bar-section __rdly-bar-left"></div>\
-		<div class="__rdly-bar-section __rdly-bar-center">\
-			<div class="__rdly-indicator"></div>\
-			<div class="__rdly-text"></div>\
-			<div class="__rdly-loading .__rdly-hidden"></div>\
+		<div class="__rdly-bar-section __rdly-bar-center __rdly-transform-centered">\
+			<div class="__rdly-above"></div>\
+			<div class="__rdly-text-elements">\
+				<div class="__rdly-indicator __rdly-transform-centered"></div>\
+				<div class="__rdly-text __rdly-transform-centered"></div>\
+			</div>\
+			<div class="__rdly-loading __rdly-hidden"></div>\
+			<div class="__rdly-below"></div>\
 		</div>\
 		<div class="__rdly-bar-section __rdly-bar-right"></div>\
 	</div>\
+	<div class="__rdly-below"></div>\
 </div>'
 */
 
@@ -50,14 +55,31 @@
 	top: 0;
 }
 
-.__rdly-progress {
+/* Should be top and bottom instead? */
+.__rdly-above {
+	position: absolute;
+	top: 0;
+	width: 100%;
+	/* function */
+	z-index: 50;
+}
+
+#__rdly_progress {
+	position: relative;
 	height: 5px;
 	width: 100%;
 }
-.__rdly-percent-done {
+#__rdly_percent_done {
+	position: relative;
 	height: 100%;
 	width: 0;
 	transition: width 200ms linear;
+}
+
+.__rdly-below {
+	position: absolute;
+	top: 100%;
+	width: 100%;
 }
 
 .__rdly-bar {
@@ -69,6 +91,7 @@
 	text-align: center;
 }
 
+/* ??: Generalize positions? Left, right, top, bottom, center, middle? */
 .__rdly-bar-left, .__rdly-bar-center, .__rdly-bar-right {
 	/* vertically centered without flexbox */
 	position: absolute;
@@ -79,6 +102,7 @@
 	left: 0;
 }
 .__rdly-bar-center {
+	/* TODO: Width should be calculated based on max word length */
 	width: 15em;
 	height: 100%;
 	text-align: center;
@@ -129,10 +153,10 @@
 	background-color: rgba(250, 250, 250, 1);
 }
 
-.__rdly-progress {
+#__rdly_progress {
 	border-bottom: 1px solid gray;
 }
-.__rdly-percent-done {
+#__rdly_percent_done {
 	background-color: #3498db;
 }
 
@@ -147,8 +171,8 @@
 
 .__rdly-indicator {
 	width: 2px;
-	height: 1.5em;
-	background-color: rgba( 200, 200, 200, 1 );
+	height: 1.15em;
+	background-color: rgba( 190, 190, 190, 1 );
 }
 
 .__rdly-loading {

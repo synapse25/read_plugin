@@ -22,9 +22,11 @@
 
 	// var queue = new require('lib/Queue.js')();
 
-	queue 		= new Queue();
-	timer 		= new ReaderlyTimer( readOptions );
-	mainDisplay = new ReaderlyDisplay( timer );
+	var queue 		= new Queue(),
+		timer 		= new ReaderlyTimer( readOptions ),
+		mainDisplay = new ReaderlyDisplay( timer ),
+		playback 	= new ReaderlyPlayback( timer, mainDisplay );
+
 
 	$(timer).on( 'starting', function showLoading() {
 		mainDisplay.wait();
