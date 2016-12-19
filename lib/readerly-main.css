@@ -2,7 +2,7 @@
 
 /*
 '<div id="__rdly">\
-	<div class="__rdly-above"></div>\
+	<div class="__rdly-above-bar"></div>\
 	<div class="__rdly-bar">\
 		<div class="__rdly-bar-section __rdly-bar-left"></div>\
 		<div class="__rdly-bar-section __rdly-bar-center __rdly-transform-centered">\
@@ -16,7 +16,7 @@
 		</div>\
 		<div class="__rdly-bar-section __rdly-bar-right"></div>\
 	</div>\
-	<div class="__rdly-below"></div>\
+	<div class="__rdly-below-bar"></div>\
 </div>'
 */
 
@@ -56,10 +56,13 @@
 }
 
 /* Should be top and bottom instead? */
-.__rdly-above {
+.__rdly-above-bar, .__rdly-below-bar {
 	position: absolute;
-	top: 0;
 	width: 100%;
+}
+
+.__rdly-above-bar {
+	top: 0;
 	/* function */
 	z-index: 50;
 }
@@ -76,10 +79,8 @@
 	transition: width 200ms linear;
 }
 
-.__rdly-below {
-	position: absolute;
+.__rdly-below-bar {
 	top: 100%;
-	width: 100%;
 }
 
 .__rdly-bar {
@@ -150,7 +151,10 @@
 /* ============================== */
 #__rdly {
 	border: 1px solid gray;
+	border-left: 0;
+	border-right: 0;
 	background-color: rgba(250, 250, 250, 1);
+	font-family: "droid", serif;
 }
 
 #__rdly_progress {
@@ -161,12 +165,11 @@
 }
 
 .__rdly-bar {
-	font-family: "droid", serif;
 	font-size: 36px;
 }
 
 .__rdly-bar-left, .__rdly-bar-center, .__rdly-bar-right {
-	padding: 0.25rem;
+	padding: 0.75%;
 }
 
 .__rdly-indicator {

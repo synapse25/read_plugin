@@ -14,7 +14,9 @@
         {
             "css": [
                 "lib/readerly-main.css",
-                "lib/readerly-playback.css"
+                "lib/readerly-playback.css",
+                "lib/settings/settings.css",
+                "lib/settings/noUi.css"
             ],
             "js": [
                 "jquery.js",
@@ -24,11 +26,14 @@
                 "lib/ReaderlyTimer.js",
                 "lib/ReaderlyDisplay.js",
                 "lib/ReaderlyPlayback.js",
+                "lib/settings/ReaderlySettings.js",
+                "lib/settings/SpeedSettings.js",
 				"main.js"
             ],
             "matches": [
                 "http://*/*",
-                "https://*/*"
+                "https://*/*",
+                "<all_urls>"
             ]
         }
     ],
@@ -45,7 +50,8 @@
     "permissions": [
         "contextMenus",
         "activeTab",
-		"storage"
+		"storage",
+        "<all_urls>"
     ],
     "short_name": "Read",
     "update_url": "https://clients2.google.com/service/update2/crx",

@@ -25,7 +25,9 @@
 	var queue 		= new Queue(),
 		timer 		= new ReaderlyTimer( readOptions ),
 		mainDisplay = new ReaderlyDisplay( timer ),
-		playback 	= new ReaderlyPlayback( timer, mainDisplay );
+		playback 	= new ReaderlyPlayback( timer, mainDisplay ),
+		settings 	= new ReaderlySettings( timer, mainDisplay ),
+		speed 		= new SpeedSettings( timer, settings );
 
 
 	$(timer).on( 'starting', function showLoading() {
@@ -66,6 +68,7 @@
 		}
 	});
 
+	// What do these do?
 	$(document).on( 'blur', '.__read .__read_speed', function () {
 		var val = Math.min( 15000, Math.max( 0, parseInt(this.value,10)));
 		setReadOptions( {"wpm": val} );
@@ -96,6 +99,7 @@
 		setReadOptions( {"longWordDelay": val} );
 	});
 
+	// What do the chrome.whatever calls do?
 	function setReadOptions ( myOptions ) {
 		// readOptions = $.extend( {}, readOptions, myOptions );
 		// chrome.storage.sync.clear(function () {
