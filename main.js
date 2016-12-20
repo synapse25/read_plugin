@@ -2,6 +2,8 @@
 * 
 * TODO:
 * - Cache whole page text when possible/read
+* - Cache options
+* - Cache reading progress?
 */
 
 (function(){
@@ -16,12 +18,6 @@
 		"longWordDelay": 1.4
 	};
 
-	// var Queue 	= window.Queue 	 = require('lib/Queue.js'),
-	// 	Timer 	= window.Timer 	 = require('lib/ReaderlyTimer.js'),
-	// 	Display = window.Display = require('lib/ReaderlyDisplay.js');
-
-	// var queue = new require('lib/Queue.js')();
-
 	var queue 		= new Queue(),
 		timer 		= new ReaderlyTimer( readOptions ),
 		mainDisplay = new ReaderlyDisplay( timer ),
@@ -32,6 +28,14 @@
 	$(timer).on( 'starting', function showLoading() {
 		mainDisplay.wait();
 	})
+
+
+	function playReadContent ( text ) {
+		// TODO: If there's already a queue, start where we left off
+		queue.process( text );
+		timer.start( queue );
+		return true;
+	}
 
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
@@ -66,71 +70,5 @@
 			});  // end getArticle
 		}
 	});
-
-	// What do these do?
-	$(document).on( 'blur', '.__read .__read_speed', function () {
-		var val = Math.min( 15000, Math.max( 0, parseInt(this.value,10)));
-		setReadOptions( {"wpm": val} );
-	});
-
-	$(document).on( 'blur', '.__read .__read_slow_start', function () {
-		var val = Math.min( 5, Math.max( 1, parseInt(this.value,10)));
-		setReadOptions( {"slowStartCount": val} );
-	});
-
-	$(document).on( 'blur', '.__read .__read_sentence_delay', function () {
-		var val = Math.min( 5, Math.max( 0, Number(this.value)));
-		setReadOptions( {"sentenceDelay": val} );
-	});
-
-	$(document).on( 'blur', '.__read .__read_punc_delay', function () {
-		var val = Math.min( 5, Math.max( 0, Number(this.value)));
-		setReadOptions( {"otherPuncDelay": val} );
-	});
-
-	$(document).on( 'blur', '.__read .__read_short_word_delay', function () {
-		var val = Math.min( 5, Math.max( 0, Number(this.value)));
-		setReadOptions( {"shortWordDelay": val} );
-	});
-
-	$(document).on( 'blur', '.__read .__read_long_word_delay', function () {
-		var val = Math.min( 5, Math.max( 0, Number(this.value)));
-		setReadOptions( {"longWordDelay": val} );
-	});
-
-	// What do the chrome.whatever calls do?
-	function setReadOptions ( myOptions ) {
-		// readOptions = $.extend( {}, readOptions, myOptions );
-		// chrome.storage.sync.clear(function () {
-		// 	chrome.storage.sync.set(readOptions, function() {
-		// 		//console.log('[READ] set:', readOptions);
-		// 	});
-		// });
-	}
-
-	// function getReadOptions () {
-	// 	chrome.storage.sync.get(null, function ( myOptions ) {
-	// 		readOptions = $.extend( {}, readOptions, myOptions );
-	// 		//console.log('[READ] get:', readOptions);
-	// 		r = new Read ( readOptions );
-	// 	});
-	// }
-
-	function playReadContent ( text ) {
-		// chrome.storage.sync.get(null, function ( myOptions ) {
-		// 	readOptions = $.extend( {}, readOptions, myOptions );
-		// 	//console.log('[READ] get:', readOptions);
-		// 	r = new Read ( readOptions );
-
-		// 	r.setText(text);
-		// 	r.play();
-		// });
-
-		queue.process( text );
-		// TODO: If there's already a queue, start where we left off
-		timer.start( queue );
-
-		return true;
-	}
 
 })();

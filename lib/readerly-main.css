@@ -6,28 +6,8 @@
 * Affects mostly main display, but also others.
 * 
 * TODO:
-* - Implement more robust hiding.
+* - Implement more robust hiding. (jQuery .hide type thing atm)
 * - More robust defaults.
-*/
-
-/*
-'<div id="__rdly">\
-	<div class="__rdly-above-bar"></div>\
-	<div class="__rdly-bar">\
-		<div class="__rdly-bar-section __rdly-bar-left"></div>\
-		<div class="__rdly-bar-section __rdly-bar-center __rdly-transform-centered">\
-			<div class="__rdly-above"></div>\
-			<div class="__rdly-text-elements">\
-				<div class="__rdly-indicator __rdly-transform-centered"></div>\
-				<div class="__rdly-text __rdly-transform-centered"></div>\
-			</div>\
-			<div class="__rdly-loading __rdly-hidden"></div>\
-			<div class="__rdly-below"></div>\
-		</div>\
-		<div class="__rdly-bar-section __rdly-bar-right"></div>\
-	</div>\
-	<div class="__rdly-below-bar"></div>\
-</div>'
 */
 
 /* ============================== */
@@ -47,13 +27,6 @@
 	transition: top 100ms linear;
 	z-index: 4300200100;
 }
-
-/* Position starts at -6 so there won't be an animation hiding it right at the start */
-/* So the class that is added is for becoming visible */
-/* Don't want to use jQuery hide */
-/*#__rdly.__rdly-down {
-	top: 0;
-}*/
 
 /* Should be top and bottom instead? */
 #__rdly #__rdly_above_bar,
@@ -218,7 +191,7 @@
 
 #__rdly .__rdly-loading {
 	fill: rgba( 150, 150, 150, 1 );
-	/* temp for visibility before svg */
+	/* temp for visibility before icon is chosen */
 	border: 1px solid gray;
 }
 

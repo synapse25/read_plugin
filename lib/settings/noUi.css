@@ -1,6 +1,5 @@
-/*noUi.css*/
+/* noUi.css */
 
-/* line 7, ../scss/_nouislider.scss */
 .noUi-target,
 .noUi-target * {
   -webkit-touch-callout: none;
@@ -12,14 +11,12 @@
   box-sizing: border-box;
 }
 
-/* line 16, ../scss/_nouislider.scss */
 .noUi-base {
   width: 100%;
   height: 100%;
   position: relative;
 }
 
-/* line 21, ../scss/_nouislider.scss */
 .noUi-origin {
   position: absolute;
   right: 0;
@@ -28,71 +25,51 @@
   bottom: 0;
 }
 
-/* line 28, ../scss/_nouislider.scss */
 .noUi-handle {
   position: relative;
   z-index: 1;
 }
 
-/* line 32, ../scss/_nouislider.scss */
 .noUi-stacking .noUi-handle {
   /* This class is applied to the lower origin when
      its values is > 50%. */
   z-index: 10;
 }
 
-/* line 37, ../scss/_nouislider.scss */
 .noUi-stacking + .noUi-origin {
   /* Fix stacking order in IE7, which incorrectly
      creates a new context for the origins. */
-  *z-index: -1;
+  /* *z-index: -1; <- Original. Meant to be this way? */
+  z-index: -1;
 }
 
-/* line 42, ../scss/_nouislider.scss */
 .noUi-state-tap .noUi-origin {
   -webkit-transition: left 0.3s, top 0.3s;
   transition: left 0.3s, top 0.3s;
 }
 
-/* line 46, ../scss/_nouislider.scss */
 .noUi-state-drag * {
   cursor: inherit !important;
 }
 
-/* Slider size and handle placement;
- */
-/* line 52, ../scss/_nouislider.scss */
+/* Slider size and handle placement */
 .noUi-horizontal {
   height: 18px;
 }
 
-/* line 55, ../scss/_nouislider.scss */
 .noUi-horizontal .noUi-handle {
   width: 32px;
   height: 20px;
   left: -16px;
-  /*top: -6px;*/
+  /* vertical centering without flexbox */
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* line 61, ../scss/_nouislider.scss */
-.noUi-horizontal.noUi-extended {
-  /*padding: 0 15px;*/
-}
-
-/* line 64, ../scss/_nouislider.scss */
-.noUi-horizontal.noUi-extended .noUi-origin {
-  /* ??: necessary to remove? */
-  /*right: -15px;*/
-}
-
-/* line 67, ../scss/_nouislider.scss */
 .noUi-vertical {
   width: 18px;
 }
 
-/* line 70, ../scss/_nouislider.scss */
 .noUi-vertical .noUi-handle {
   width: 28px;
   height: 34px;
@@ -100,27 +77,21 @@
   top: -17px;
 }
 
-/* line 76, ../scss/_nouislider.scss */
 .noUi-vertical.noUi-extended {
   padding: 15px 0;
 }
 
-/* line 79, ../scss/_nouislider.scss */
 .noUi-vertical.noUi-extended .noUi-origin {
   bottom: -15px;
 }
 
-/* Styling;
- */
-/* line 85, ../scss/_nouislider.scss */
+/* Styling */
 .noUi-background {
   background: #FAFAFA;
-  /*box-shadow: inset 0 1px 1px #f0f0f0;*/
   box-shadow: inset 0 1px 1px #B3B3B3;
   border: 1px solid gray;
 }
 
-/* line 89, ../scss/_nouislider.scss */
 .noUi-connect {
   background: #3498DB;
   box-shadow: inset 0 0 3px rgba(51, 51, 51, 0.45);
@@ -128,38 +99,24 @@
   transition: background 450ms;
 }
 
-/* line 95, ../scss/_nouislider.scss */
 .noUi-origin {
   border-radius: 2px;
 }
 
-/* line 98, ../scss/_nouislider.scss */
 .noUi-target {
-  /*border-radius: 4px;*/
-  /*border: 1px solid lightgrey;*/
   box-shadow: inset 0 1px 1px #f0f0f0, 0 3px 6px -5px #bbbbbb;
 }
 
-/* line 103, ../scss/_nouislider.scss */
-.noUi-target.noUi-connect {
-  /*box-shadow: inset 0 0 3px rgba(51, 51, 51, 0.45), 0 3px 6px -5px #bbbbbb;*/
-}
-
-/* Handles and cursors;
- */
-/* line 109, ../scss/_nouislider.scss */
+/* Handles and cursors */
 .noUi-dragable {
   cursor: w-resize;
 }
 
-/* line 112, ../scss/_nouislider.scss */
 .noUi-vertical .noUi-dragable {
   cursor: n-resize;
 }
 
-/* line 115, ../scss/_nouislider.scss */
 .noUi-handle {
-  /*border: 1px solid #d9d9d9;*/
   border: 1.5px solid #959191;
   border-radius: 3px;
   background: #FFF;
@@ -167,14 +124,11 @@
   box-shadow: inset 0 0 1px white, inset 0 1px 7px #ebebeb, 0 3px 6px -3px #bbbbbb;
 }
 
-/* line 124, ../scss/_nouislider.scss */
 .noUi-active {
   box-shadow: inset 0 0 1px white, inset 0 1px 7px #dddddd, 0 3px 6px -3px #bbbbbb;
 }
 
-/* Handle stripes;
- */
-/* line 133, ../scss/_nouislider.scss */
+/* Handle stripes */
 .noUi-handle:before,
 .noUi-handle:after {
   content: "";
@@ -182,18 +136,15 @@
   position: absolute;
   height: 14px;
   width: 1px;
-  /*background: #E8E7E6;*/
   background: #959191;
   left: 14px;
   top: 2px;
 }
 
-/* line 143, ../scss/_nouislider.scss */
 .noUi-handle:after {
   left: 16px;
 }
 
-/* line 147, ../scss/_nouislider.scss */
 .noUi-vertical .noUi-handle:before,
 .noUi-vertical .noUi-handle:after {
   width: 14px;
@@ -202,27 +153,21 @@
   top: 14px;
 }
 
-/* line 153, ../scss/_nouislider.scss */
 .noUi-vertical .noUi-handle:after {
   top: 17px;
 }
 
-/* Disabled state;
- */
-/* line 160, ../scss/_nouislider.scss */
+/* Disabled state */
 [disabled].noUi-connect,
 [disabled] .noUi-connect {
   background: #B8B8B8;
 }
 
-/* line 163, ../scss/_nouislider.scss */
 [disabled] .noUi-handle {
   cursor: not-allowed;
 }
 
-/* Blocked state;
- */
-/* line 170, ../scss/_nouislider.scss */
+/* Blocked state */
 .noUi-state-blocked.noUi-connect,
 .noUi-state-blocked .noUi-connect {
   background: #4FDACF;
