@@ -138,9 +138,7 @@
 }
 /* Don't show border when closed, just open */
 #__rdly_settings_container.__rdly-settings-open {
-	border: 1px solid gray;
-	border-right: 0;
-	border-left: 0;
+	border-top: 1px solid gray;
 }
 
 #__rdly_settings_tabs {
