@@ -58,7 +58,7 @@
 /* Should be top and bottom instead? */
 #__rdly #__rdly_above_bar,
 #__rdly #__rdly_below_bar {
-	position: absolute;
+	position: relative;
 	width: 100%;
 }
 
