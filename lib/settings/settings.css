@@ -1,4 +1,14 @@
-/*settings.css*/
+/* settings.css
+* 
+* Refer to main settings script (currently ReaderlySettings.js
+* on 12/20/16) for DOM structure.
+* 
+* Affects main settings, settings modules, and playback.
+* Consider name change.
+* 
+* TODO:
+* - More robust defualts
+*/
 
 /* ============================== */
 /* SKIN */
@@ -7,14 +17,33 @@
 #__rdly button {
 	position: relative;
 	padding: 0;
+  /* functional */
+  cursor: pointer;
+}
+
+#__rdly button,
+#__rdly label,
+#__rdly input {
+  /* font defaults from chrome inspection */
+  font-family: "droid", serif;
+  font-size: 16px;
+  line-height: normal;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: none;
+  font-stretch: normal;
+  font-feature-settings: normal;
+  font-kerning: auto;
+  -webkit-font-smoothing: auto;
+  text-transform: none;
 }
 
 #__rdly .__rdly-big-menu-button {
 	width: 3em;
 	height: 3em;
+  /* default followed by desired setting */
+  margin: 0;
 	margin-right: .3em;
-	/* function */
-	cursor: pointer;
 }
 
 /* Solution to transition? https://stackoverflow.com/questions/3508605/how-can-i-transition-height-0-to-height-auto-using-css#8331169 */
@@ -55,18 +84,18 @@
 	text-align: center;
 }
 
-.__rdly-settings-menu {
+#__rdly .__rdly-settings-menu {
 	position: relative;
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: space-around;
 }
 
-.__rdly-setting {
+#__rdly .__rdly-setting {
 	padding: 0.5rem;
 }
 
-.__rdly-slider-controls {
+#__rdly .__rdly-slider-controls {
 	display: flex;
 	align-items: center;
 }
@@ -94,7 +123,8 @@
 #__rdly .__rdly-big-menu-button:active {
 	background-color: rgba( 200, 200, 200, 1 );
 }
-#__rdly .__rdly-big-menu-button:hover, #__rdly .__rdly-active-ui {
+#__rdly .__rdly-big-menu-button:hover,
+#__rdly .__rdly-active-ui {
 	background-color: rgba(160, 160, 160, 1);
 	fill: rgba(100, 100, 100, 1);
 }
@@ -123,7 +153,7 @@
 
 /* TESTING */
 /* line 140, ../scss/_read.scss */
-.__rdly_setting {
+#__rdly .__rdly_setting {
   position: relative;
   display: inline-block;
   height: 60px;
@@ -135,14 +165,14 @@
   font-family: "droid", serif;
 }
 /* line 149, ../scss/_read.scss */
-.__rdly-slider-label {
+#__rdly .__rdly-slider-label {
   /*position: absolute;*/
   /*top: 10px;*/
   /*left: 10px;*/
   font-size: 21px;
 }
 /* line 158, ../scss/_read.scss */
-.__rdly-slider-input {
+#__rdly .__rdly-slider-input {
   /*position: absolute;*/
   /*top: 30px;*/
   /*left: 8px;*/
@@ -167,7 +197,7 @@
   border-bottom: 2px solid rgba(180,180,180, 1);
 }
 /* line 170, ../scss/_read.scss */
-.__rdly-slider-input:focus {
+#__rdly .__rdly-slider-input:focus {
   /*outline: none;*/
   border: 1px solid #3498db;
   -webkit-border-radius: 2px;
@@ -177,7 +207,7 @@
   border-radius: 2px;
 }
 /* line 178, ../scss/_read.scss */
-.__rdly-slider {
+#__rdly .__rdly-slider {
 	display: inline-block;
   /*position: absolute;*/
   /*top: 39px;*/
