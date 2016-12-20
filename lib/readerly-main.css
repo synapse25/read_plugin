@@ -1,0 +1,186 @@
+/*readerly-main.css*/
+
+/*
+'<div id="__rdly">\
+	<div class="__rdly-above-bar"></div>\
+	<div class="__rdly-bar">\
+		<div class="__rdly-bar-section __rdly-bar-left"></div>\
+		<div class="__rdly-bar-section __rdly-bar-center __rdly-transform-centered">\
+			<div class="__rdly-above"></div>\
+			<div class="__rdly-text-elements">\
+				<div class="__rdly-indicator __rdly-transform-centered"></div>\
+				<div class="__rdly-text __rdly-transform-centered"></div>\
+			</div>\
+			<div class="__rdly-loading __rdly-hidden"></div>\
+			<div class="__rdly-below"></div>\
+		</div>\
+		<div class="__rdly-bar-section __rdly-bar-right"></div>\
+	</div>\
+	<div class="__rdly-below-bar"></div>\
+</div>'
+*/
+
+/* ============================== */
+/* STRUCTURE */
+/* ============================== */
+#__rdly, #__rdly * {
+	box-sizing: border-box;
+}
+
+#__rdly {
+	display: block;
+	position: fixed;
+	top: -6rem;
+	left: 0;
+	width: 100%;
+	transition: top 100ms linear;
+}
+
+#__rdly .__rdly-hidden {
+	display: none;
+}
+
+/* horizontally and vertically centered without flexbox*/
+#__rdly .__rdly-transform-centered {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate( -50% ,-50% );
+}
+
+/* Position starts at -6 so there won't be an animation hiding it right at the start */
+/* So the class that is added is for becoming visible */
+/* Don't want to use jQuery hide */
+#__rdly.__rdly-down {
+	top: 0;
+}
+
+/* Should be top and bottom instead? */
+.__rdly-above-bar, .__rdly-below-bar {
+	position: absolute;
+	width: 100%;
+}
+
+.__rdly-above-bar {
+	top: 0;
+	/* function */
+	z-index: 50;
+}
+
+#__rdly_progress {
+	position: relative;
+	height: 5px;
+	width: 100%;
+}
+#__rdly_percent_done {
+	position: relative;
+	height: 100%;
+	width: 0;
+	transition: width 200ms linear;
+}
+
+.__rdly-below-bar {
+	top: 100%;
+}
+
+.__rdly-bar {
+	width: 100%;
+	/* ??: Will this work if font-size is declared lower down? */
+	height: 2em;
+	/* For absolutely positioned children */
+	position: relative;
+	text-align: center;
+}
+
+/* ??: Generalize positions? Left, right, top, bottom, center, middle? */
+.__rdly-bar-left, .__rdly-bar-center, .__rdly-bar-right {
+	/* vertically centered without flexbox */
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+}
+.__rdly-bar-left {
+	left: 0;
+}
+.__rdly-bar-center {
+	/* TODO: Width should be calculated based on max word length */
+	width: 15em;
+	height: 100%;
+	text-align: center;
+}
+.__rdly-bar-right {
+	right: 0;
+}
+
+.__rdly-indicator {
+	/* Don't get in the way of text */
+	position: absolute;
+	z-index: -10;
+}
+
+.__rdly-loading {
+	/* Can't be centered with transform because transform is used to rotate it */
+	/* Horizontally centered by parent text-align */
+	display: inline-block;
+	position: absolute;
+	top: 0;
+	width: 2em;
+	height: 2em;
+}
+#__rdly .__rdly-rotating {
+    -webkit-animation:spin 4s linear infinite;
+    -moz-animation:spin 4s linear infinite;
+    animation:spin 4s linear infinite;
+}
+@-moz-keyframes spin {
+	100%
+	{ -moz-transform: rotate(360deg); }
+}
+@-webkit-keyframes spin {
+	100%
+	{ -webkit-transform: rotate(360deg); }
+}
+@keyframes spin {
+	100%
+	{ transform:rotate(360deg); }
+}
+
+
+/* ============================== */
+/* SKIN */
+/* ============================== */
+#__rdly {
+	border: 1px solid gray;
+	border-left: 0;
+	border-right: 0;
+	background-color: rgba(250, 250, 250, 1);
+	font-family: "droid", serif;
+}
+
+#__rdly_progress {
+	border-bottom: 1px solid gray;
+}
+#__rdly_percent_done {
+	background-color: #3498db;
+}
+
+.__rdly-bar {
+	font-size: 36px;
+}
+
+.__rdly-bar-left, .__rdly-bar-center, .__rdly-bar-right {
+	padding: 0.75%;
+}
+
+.__rdly-indicator {
+	width: 2px;
+	height: 1.15em;
+	background-color: rgba( 190, 190, 190, 1 );
+}
+
+.__rdly-loading {
+	fill: rgba( 150, 150, 150, 1 );
+	/* temp for visibility before svg */
+	border: 1px solid gray;
+}
+

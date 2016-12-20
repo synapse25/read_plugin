@@ -1,0 +1,96 @@
+/*readerly-playback.css*/
+
+/*
+'<div id="__rdly_progress">\
+	<div id="__rdly_percent_done">\
+		<div id="__rdly_scrubber"></div>\
+	</div>\
+</div>'
+
+'<div id="__rdly_playback_controls">\
+	<button id="__rdly_rewind_sentence" class="__rdly-playback-button"></button>\
+	<button id="__rdly_rewind_word" class="__rdly-playback-button"></button>\
+	<button id="__rdly_pause" class="__rdly-playback-button"></button>\
+	<button id="__rdly_play" class="__rdly-playback-button"></button>\
+	<button id="__rdly_fastforward_word" class="__rdly-playback-button"></button>\
+	<button id="__rdly_fastforward_sentence" class="__rdly-playback-button"></button>\
+</div>'
+
+'<div id="__rdly_restart"></div>'
+*/
+
+
+
+/* ============================== */
+/* STRUCTURE */
+/* ============================== */
+#__rdly_progress {
+	/* Not till it's ready to be manipulated */
+	/* function */
+	/*cursor: pointer;*/
+}
+#__rdly_scrubber {
+	/* Probably needs to be an arrow pointing up. svg time */
+	position: absolute;
+	height: .75rem;
+	width: .5rem;
+	right: 0;
+	top:0;
+	transform: translate( 50%, 0 );
+}
+
+#__rdly_restart {
+	/*position: relative;*/
+	/*width: 1.5em;*/
+	/*height: 1.5em;*/
+	/* function */
+	/*cursor: pointer;*/
+}
+
+#__rdly_playback_controls {
+	clear: both;
+	height: 1em;
+	/* For now */
+	display: none;
+}
+/* This should be controlled elsewhere */
+.__rdly-playback-button {
+	width: 1em;
+	padding-right: 0.1em;
+}
+#__rdly_playback_controls:last-child {
+	padding-right: 0;
+}
+
+
+
+/* ============================== */
+/* SKIN */
+/* ============================== */
+#__rdly_scrubber {
+	/* temp */
+	/*background-color: rgba( 0, 0, 0, 0.2 );*/
+}
+
+#__rdly_rewind_sentence {
+	/*background-image: url('');*/
+}
+#__rdly_rewind_word {
+	/*background-image: url('');*/
+}
+#__rdly_pause {
+	/*background-image: url('');*/
+}
+#__rdly_play {
+	/*background-image: url('');*/
+}
+#__rdly_fastforward_word {
+	/*background-image: url('');*/
+}
+#__rdly_fastforward_sentence {
+	/*background-image: url('');*/
+}
+
+#__rdly_restart {
+	/*background-image: url('');*/
+}

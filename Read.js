@@ -128,7 +128,8 @@
 	var p = Read.prototype;
 
 	p._display = function () {
-		this._currentWord = this._block.getWord();
+		this._currentWord = this._block.next();
+		// this._currentWord = this._block.getWord();
 		if (this._currentWord) {
 			this._showWord();
 
@@ -136,8 +137,8 @@
 
 			if ( this._currentWord.hasPeriod ) time *= this._options.sentenceDelay;
 			if ( this._currentWord.hasOtherPunc ) time *= this._options.otherPuncDelay;
-			if ( this._currentWord.isShort ) time *= this._options.shortWordDelay;
-			if ( this._currentWord.isLong ) time *= this._options.longWordDelay;
+			if ( this._currentWord.isShort() ) time *= this._options.shortWordDelay;
+			if ( this._currentWord.isLong() ) time *= this._options.longWordDelay;
 			if ( this._currentWord.isNumeric ) time *= this._options.numericDelay;
 
 			this._slowStartCount = (this._slowStartCount - 1 ) || 1;
@@ -154,8 +155,9 @@
 
 	p._showWord = function () {
 		if (this._displayElement) {
-			var word = this._currentWord.val;
+			var word = this._currentWord.chars;
 
+			// TODO: Is this necessary?
 			var before = word.substr(0, this._currentWord.index);
 			var letter = word.substr(this._currentWord.index, 1);
 
@@ -163,8 +165,8 @@
 			var $before = this._options.element.find('.__read_before').html(before).css("opacity","0");
 			var $letter = this._options.element.find('.__read_letter').html(letter).css("opacity","0");
 
-			if (!this._currentWord.val.match(whiteSpace)){
-				this._displayElement.html(this._currentWord.val);
+			if (!this._currentWord.chars.match(whiteSpace)){
+				this._displayElement.html(this._currentWord.chars);
 			}
 		}
 
@@ -339,13 +341,17 @@
 			$('.__read_loading').hide();
 			this.pause();
 			this.restart();
-			this._block = new ReadBlock(val);
-			this._currentWord = this._block.getWord();
+			this._block = new Queue(val);
+			// var test = ReaderlyTimer( this._options );
+			// // console.log( test.start( this._block ) );
+			// // // console.log( test.pause() );
+			// $(test).on('loopEnd', function (evnt, timer) { console.log(timer); timer.pause() })
+			// // // this._currentWord = this._block.getWord();
 		}
 	};
 
 	p._next = function() {
-		this._block.next();
+		// this._block.next();
 		this._display();
 	};
 
@@ -456,7 +462,7 @@
 				this._slowStartCount = this._options.slowStartCount;
 			}
 			this._block.restart();
-			this._currentWord = this._block.getWord();
+			// this._currentWord = this._block.getWord();
 			this._isEnded = false;
 			this.play();
 		}
