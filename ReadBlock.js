@@ -1,4 +1,5 @@
 ( function ( window ){
+
 	"use strict";
 
 	var wordRegex = /([^\s\-\—\/]+[\-\—\/]?|[\r\n]+)/g;
@@ -12,8 +13,8 @@
 	var c = '[^'+vowels+']';
 	var v = '['+vowels+']';
 	var vccv = new RegExp('('+v+c+')('+c+v+')', 'g');
-	var simple = new RegExp('(.{2,4}'+v+')'+'('+c+')', 'g');
-	var puncSplit = /(.+?)(\.\s|\,\s)(.+?)/;
+	var simple = new RegExp('(.{2,4}'+v+')'+'('+c+')', 'g');  // Currently not used
+	var puncSplit = /(.+?)(\.[^\w]\b|,[^\w]\b)(.+?)/;
 
 	var ReadBlock = function ( val ) {
 		this.val = val;
@@ -35,23 +36,26 @@
 		var rawWords = this.val.match(wordRegex);
 
 		// Extra splits on odd punctuation situations
-		var i = rawWords.length; while (i--) {
+		var i = rawWords.length;
+		while (i--) {
 			var w = rawWords[i];
 			w = this.puncBreak(w);
 			var subWords = w.match(wordRegex);
-			var j = subWords.length; while (j--) {
+			var j = subWords.length;
+			while (j--) {
 				if (subWords[j].length > 13) {
 					var subw = this.break(subWords[j]);
 					var subsubWords = subw.match(wordRegex);
-					var k = subsubWords.length; while (k--) {
-						this.words.unshift( new ReadWord(subsubWords[k]) ) ;
+					var k = subsubWords.length;
+					while (k--) {
+						this.words.unshift( new Fragment(subsubWords[k]) ) ;
 					}
 				} else {
-					this.words.unshift( new ReadWord(subWords[j]) ) ;
+					this.words.unshift( new Fragment(subWords[j]) ) ;
 				}
 			}
 		}
-	};
+	};  // End p.process()
 
 	p.puncBreak = function (word) {
 		var parts = puncSplit.exec(word);
