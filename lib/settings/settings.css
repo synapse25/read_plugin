@@ -46,6 +46,15 @@
 	margin-right: .3em;
 }
 
+.__rdly-sup-menu-button {
+  position: relative;
+  top: 0;
+  right: 0;
+  width: 1.5em;
+  height: 1.5em;
+  margin: 0;
+}
+
 /* Solution to transition? https://stackoverflow.com/questions/3508605/how-can-i-transition-height-0-to-height-auto-using-css#8331169 */
 /* See comments on the thread */
 #__rdly_settings_container {
@@ -116,17 +125,16 @@
 }
 
 #__rdly button {
-	/*background-color: rgba( 200, 200, 200, 1 );*/
-    /*border: 1px solid gray;*/
 	border-radius: 3px;
 }
-/*#__rdly .__rdly-big-menu-button:hover {
-	background-color: rgba( 130, 130, 130, 1 );
-}*/
-#__rdly .__rdly-big-menu-button:active {
+
+#__rdly button {
+  background-color: rgba( 220, 220, 220, 1 );
+}
+#__rdly button:active {
 	background-color: rgba( 200, 200, 200, 1 );
 }
-#__rdly .__rdly-big-menu-button:hover,
+#__rdly button:hover,
 #__rdly .__rdly-active-ui {
 	background-color: rgba(160, 160, 160, 1);
 	fill: rgba(100, 100, 100, 1);

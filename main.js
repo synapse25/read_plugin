@@ -29,7 +29,6 @@
 		settings 	= new ReaderlySettings( timer, mainDisplay ),
 		speed 		= new SpeedSettings( timer, settings );
 
-
 	$(timer).on( 'starting', function showLoading() {
 		mainDisplay.wait();
 	})
@@ -128,6 +127,7 @@
 		// });
 
 		queue.process( text );
+		// TODO: If there's already a queue, start where we left off
 		timer.start( queue );
 
 		return true;

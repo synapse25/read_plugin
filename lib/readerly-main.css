@@ -41,7 +41,7 @@
 #__rdly {
 	display: block;
 	position: fixed;
-	top: -6rem;
+	top: 0;
 	left: 0;
 	width: 100%;
 	transition: top 100ms linear;
@@ -51,9 +51,9 @@
 /* Position starts at -6 so there won't be an animation hiding it right at the start */
 /* So the class that is added is for becoming visible */
 /* Don't want to use jQuery hide */
-#__rdly.__rdly-down {
+/*#__rdly.__rdly-down {
 	top: 0;
-}
+}*/
 
 /* Should be top and bottom instead? */
 #__rdly #__rdly_above_bar,
@@ -101,6 +101,12 @@
 	position: absolute;
 	top: 50%;
 	transform: translateY(-50%);
+	padding: 0.75%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	align-content: center;
+	justify-content: center;
 }
 #__rdly .__rdly-bar-left {
 	left: 0;
@@ -113,6 +119,9 @@
 }
 #__rdly .__rdly-bar-right {
 	right: 0;
+}
+#__rdly #__rdly_close {
+	align-self: flex-start;
 }
 
 #__rdly .__rdly-indicator {
@@ -199,12 +208,6 @@
 #__rdly #__rdly_bar a,
 #__rdly #__rdly_bar li {
 	font-size: 36px;
-}
-
-#__rdly .__rdly-bar-left,
-#__rdly .__rdly-bar-center,
-#__rdly .__rdly-bar-right {
-	padding: 0.75%;
 }
 
 #__rdly .__rdly-indicator {
