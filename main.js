@@ -2,8 +2,11 @@
 * 
 * TODO:
 * - Cache whole page text when possible/read
-* - Cache options
+* - Cache options and prevent them from being reset on
+* 	close of extension
 * - Cache reading progress?
+* - Trigger pause on clicking of central element, not
+* 	just text
 */
 
 (function(){
