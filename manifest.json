@@ -14,7 +14,7 @@
         {
             "css": [
                 "lib/readerly-main.css",
-                "lib/readerly-playback.css",
+                "lib/playback/readerly-playback.css",
                 "lib/settings/settings.css",
                 "lib/settings/noUi.css"
             ],
@@ -25,7 +25,7 @@
                 "lib/Queue.js",
                 "lib/ReaderlyTimer.js",
                 "lib/ReaderlyDisplay.js",
-                "lib/ReaderlyPlayback.js",
+                "lib/playback/ReaderlyPlayback.js",
                 "lib/settings/ReaderlySettings.js",
                 "lib/settings/SpeedSettings.js",
 				"main.js"

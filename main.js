@@ -39,13 +39,14 @@
 		var func = request.functiontoInvoke;
 		if ( func === "readSelectedText" ) {
 			playReadContent( request.selectedText );
+
 		} else if ( func === "readFullPage" ) {
-
-
 
 			var getArticle = $.get( 'https://readparser.herokuapp.com/?url=' + document.URL );
 			getArticle.success(function( result ) {
+
 				playReadContent( result );
+
 			}).error(function( jqXHR, textStatus, errorThrown ) {
 				var text = '';
 				var elements = $('p, li, h1, h2, h3, h4, h5, h6, span, pre');
@@ -62,9 +63,12 @@
 						if (!(element.tagName === 'LI' && elementText.includes('    ')))
 							text += " " + elementText;
 				});  // end for each desired element
+
 				playReadContent(text);
+
 			});  // end getArticle
-		}
-	});
+		}  // end if event is ___
+
+	});  // End event listener
 
 })();
