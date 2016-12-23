@@ -11,18 +11,8 @@
 
 (function(){
 
-	// var r; // Read Object
-	var readOptions = {
-		"wpm": 300,
-		"slowStartCount": 5,
-		"sentenceDelay": 2.5,
-		"otherPuncDelay": 1.5,
-		"shortWordDelay": 1.3,
-		"longWordDelay": 1.4
-	};
-
 	var queue 		= new Queue(),
-		timer 		= new ReaderlyTimer( readOptions ),
+		timer 		= new ReaderlyTimer(),
 		mainDisplay = new ReaderlyDisplay( timer ),
 		playback 	= new ReaderlyPlayback( timer, mainDisplay ),
 		settings 	= new ReaderlySettings( timer, mainDisplay ),
@@ -50,6 +40,9 @@
 		if ( func === "readSelectedText" ) {
 			playReadContent( request.selectedText );
 		} else if ( func === "readFullPage" ) {
+
+
+
 			var getArticle = $.get( 'https://readparser.herokuapp.com/?url=' + document.URL );
 			getArticle.success(function( result ) {
 				playReadContent( result );
