@@ -28,7 +28,7 @@
                 "lib/playback/ReaderlyPlayback.js",
                 "lib/settings/ReaderlySettings.js",
                 "lib/settings/SpeedSettings.js",
-				"main.js"
+				"bundle.js"
             ],
             "matches": [
                 "http://*/*",
