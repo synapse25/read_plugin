@@ -78,7 +78,6 @@
 			var sampleText = smallSample( $clean );
 
 			detect( sampleText ).then(function (data) {
-				console.log(data.iso6391);
 				var lang = data.iso6391 || 'en',
 					cmds = unfluff.lazy( $clean.html(), lang ),
 					data = cmds.text();
@@ -879,7 +878,6 @@ void function () {
         hangingText = '';
       }
       txt = cleanParagraphText(node.text());
-      txt = txt.replace(/(\w+\.)([A-Z]+)/, '$1 $2');
       return txts = txts.concat(txt.split(/\r?\n/));
     });
     if (hangingText.length > 0) {
