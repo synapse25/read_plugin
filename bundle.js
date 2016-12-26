@@ -18,13 +18,13 @@
 
 	var queue 		= new Queue(),
 		timer 		= new ReaderlyTimer(),
-		mainDisplay = new ReaderlyDisplay( timer ),
-		playback 	= new ReaderlyPlayback( timer, mainDisplay ),
-		settings 	= new ReaderlySettings( timer, mainDisplay ),
+		coreDisplay = new ReaderlyDisplay( timer ),
+		playback 	= new ReaderlyPlayback( timer, coreDisplay ),
+		settings 	= new ReaderlySettings( timer, coreDisplay ),
 		speed 		= new SpeedSettings( timer, settings );
 
 	$(timer).on( 'starting', function showLoading() {
-		mainDisplay.wait();
+		playback.wait();
 	})
 
 
@@ -62,8 +62,8 @@
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
 
-		mainDisplay.show();
-		mainDisplay.wait();
+		coreDisplay.show();
+		playback.wait();  // Do we need this?
 
 		var func = request.functiontoInvoke;
 		if ( func === "readSelectedText" ) {
@@ -77,7 +77,7 @@
 
 			var sampleText = smallSample( $clean );
 
-			detect( sampleText ).then(function (data) {
+			detect( sampleText ).then(function afterLanguageDetection(data) {
 				var lang = data.iso6391 || 'en',
 					cmds = unfluff.lazy( $clean.html(), lang ),
 					data = cmds.text();
