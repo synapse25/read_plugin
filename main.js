@@ -13,14 +13,15 @@
 (function(){
 
 	var unfluff = require('@knod/unfluff'),
-		detect 	= require('detect-lang');
+		detect 	= require('detect-lang'),
+		speedFactory = require('./lib/settings/SpeedSettings.js');
 
 	var queue 		= new Queue(),
 		timer 		= new ReaderlyTimer(),
 		coreDisplay = new ReaderlyDisplay( timer ),
 		playback 	= new ReaderlyPlayback( timer, coreDisplay ),
 		settings 	= new ReaderlySettings( timer, coreDisplay ),
-		speed 		= new SpeedSettings( timer, settings );
+		speed 		= new speedFactory( timer, settings );
 
 	$(timer).on( 'starting', function showLoading() {
 		playback.wait();
