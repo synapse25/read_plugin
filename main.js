@@ -66,8 +66,12 @@
 
 		var func = request.functiontoInvoke;
 		if ( func === "readSelectedText" ) {
-
-			read( request.selectedText );
+			
+			var contents = document.getSelection().getRangeAt(0).cloneContents();
+			var container = $('<div></div>');
+			container.append(contents);
+			container.find('sup').remove();
+			read( container.text() );
 
 		} else if ( func === "readFullPage" ) {
 
