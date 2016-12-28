@@ -15,21 +15,23 @@
 
 (function(){
 
-
 	// ============== SETUP ============== \\
-	var unfluff = require('@knod/unfluff'),
-		detect 	= require('detect-lang'),
-		Storage = require('./lib/ReaderlyStorage.js');
+	var unfluff 	= require('@knod/unfluff'),
+		detect 		= require('detect-lang'),
+		Storage 	= require('./lib/ReaderlyStorage.js'),
+		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Speed 		= require('./lib/settings/SpeedSettings.js');
 
 	var queue, storage, timer, coreDisplay, playback, settings, speed;
-	
+
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new ReaderlyTimer( oldSettings, storage )
+		timer 		= new Timer( oldSettings, storage )
 		coreDisplay = new ReaderlyDisplay( timer ),
-		playback 	= new ReaderlyPlayback( timer, coreDisplay ),
+		playback 	= new Playback( timer, coreDisplay ),
 		settings 	= new ReaderlySettings( timer, coreDisplay ),
-		speed 		= new SpeedSettings( timer, settings );
+		speed 		= new Speed( timer, settings );
 	};  // End afterLoadSettings()
 
 
