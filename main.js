@@ -8,25 +8,52 @@
 * - Trigger pause on clicking of central element, not
 * 	just text
 * - Add function "cleanHTML" to get rid of unwanted elements
+* 
+* WARNING:
+* Storage is all user settings. Too cumbersome otherwise for now.
 */
 
 (function(){
 
-	var unfluff = require('@knod/unfluff'),
-		detect 	= require('detect-lang');
 
-	var queue 		= new Queue(),
-		timer 		= new ReaderlyTimer(),
+	// ============== SETUP ============== \\
+	var unfluff = require('@knod/unfluff'),
+		detect 	= require('detect-lang'),
+		Storage = require('./lib/ReaderlyStorage.js');
+
+
+	var queue, storage, timer, mainDisplay, playback, settings, speed;
+	
+	var afterLoadSettings = function ( oldSettings ) {
+		console.log('old settings:', oldSettings );
+		timer 		= new ReaderlyTimer( oldSettings, storage )
 		mainDisplay = new ReaderlyDisplay( timer ),
 		playback 	= new ReaderlyPlayback( timer, mainDisplay ),
 		settings 	= new ReaderlySettings( timer, mainDisplay ),
 		speed 		= new SpeedSettings( timer, settings );
-
-	$(timer).on( 'starting', function showLoading() {
-		mainDisplay.wait();
-	})
+	};  // End afterLoadSettings()
 
 
+	var addEvents = function () {
+		$(timer).on( 'starting', function showLoading() { mainDisplay.wait(); })
+	};  // End addEvents()
+
+
+	var init = function () {
+		queue 	= new Queue();
+		storage = new Storage();
+		storage.loadAll( afterLoadSettings );
+
+		addEvents();
+	};  // End init()
+
+
+	// ============== START IT UP ============== \\
+	init();
+
+
+
+	// ============== RUNTIME ============== \\
 	var read = function ( text ) {
 		// TODO: If there's already a queue, start where we left off
 		queue.process( text );
@@ -56,7 +83,7 @@
 		}
 
 		return sample;
-	};
+	};  // End smallSample()
 
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
