@@ -46,8 +46,7 @@
 
 
 		rSto.loadAll = function ( callback ) {
-			chrome.storage.sync.get(null, function loadOldReaderlySettings( settings ) {
-				console.log('load settings:', settings);
+			chrome.storage.sync.get( null, function loadOldReaderlySettings( settings ) {
 				callback( settings );
 			});
 		};  // End rSto.loadAll()
@@ -55,14 +54,13 @@
 
 		rSto.get = function ( keyOrKeys, callback ) {
 			chrome.storage.sync.get( keyOrKeys, function loadOldReaderlySettings( settings ) {
-				console.log('load/get settings:', settings);
 				callback( settings );
 			});
 		};  // End rSto.get()
 
 
 		rSto.cleanSave = function ( settings, callback ) {
-			chrome.storage.sync.clear(function clearReaderlySettings() {
+			chrome.storage.sync.clear( function clearReaderlySettings() {
 				// Docs say no args returned
 				chrome.storage.sync.set( settings, callback );
 			});
