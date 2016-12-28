@@ -97,6 +97,7 @@
 * - Add extra paragraph pause back in
 * - Long word delay not working? How about otherPunc? And do more
 * 	symbols need to be included in that set of otherPunc?
+* - Implement more robust pausing (store in bool and wait for appropriate time)
 * 
 * NOTES:
 * - Always return Timer so functions can be chained
@@ -355,12 +356,9 @@
 			// Otherwise keep going
 			$(rTim).trigger( 'loopStart', [rTim] );
 
-			// "next" or "prev" word fragment
+			// "next", "prev", or "current" word fragment
 			rTim._currentWordFragment = rTim._queue[ rTim._stepOperation ]();
-
-			// ======= DELAY ======= \\
 			var delay = rTim.calcDelay();
-
 			if ( !justOnce ) { rTim._timer = setTimeout( rTim._loop, delay ); }
 
 			// Do it after setTimeout so that you can easily pause on "newWordFragment"
