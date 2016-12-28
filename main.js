@@ -19,6 +19,7 @@
 	var unfluff 	= require('@knod/unfluff'),
 		detect 		= require('detect-lang'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
+		Timer 		= require('./lib/ReaderlyTimer.js'),
 		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
@@ -26,7 +27,7 @@
 
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new ReaderlyTimer( oldSettings, storage )
+		timer 		= new Timer( oldSettings, storage )
 		coreDisplay = new ReaderlyDisplay( timer ),
 		playback 	= new Playback( timer, coreDisplay ),
 		settings 	= new ReaderlySettings( timer, coreDisplay ),

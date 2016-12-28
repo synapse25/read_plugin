@@ -196,3 +196,15 @@
 .noUi-horizontal.noUi-extended .noUi-origin  {
 	right: -32px;
 }
+
+/*  PROGRESSS BAR AND SCRUBBER  */
+#__rdly_progress .noUi-handle {
+  top: 6px;
+  height: 15px;
+}
+#__rdly_progress .noUi-handle::before,
+#__rdly_progress .noUi-handle::after {
+  height: 80%;
+  top: 50%;
+  transform: translateY(-50%);
+}
