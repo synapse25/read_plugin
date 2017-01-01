@@ -28,13 +28,14 @@
 	z-index: 4300200100;
 }
 
-/* Should be top and bottom instead? */
-#__rdly #__rdly_above_bar,
-#__rdly #__rdly_below_bar {
-	position: relative;
+.__rdly-main-section {
 	width: 100%;
+	display: flex;
+	/* For absolutely positioned children */
+	position: relative;
 }
 
+/* Should be "top" and "bottom" instead? */
 #__rdly #__rdly_above_bar {
 	top: 0;
 	/* function */
@@ -46,11 +47,8 @@
 }
 
 #__rdly #__rdly_bar {
-	width: 100%;
 	/* ??: Will this work if font-size is declared lower down? */
 	height: 2em;
-	/* For absolutely positioned children */
-	position: relative;
 	text-align: center;
 }
 
@@ -130,16 +128,17 @@
 	background-color: rgba(250, 250, 250, 1);
 }
 
+.__rdly-main-section {
+	border: 0;
+	border-bottom: 1px solid gray;
+}
+
 #__rdly #__rdly_bar,
 #__rdly #__rdly_bar div,
 #__rdly #__rdly_bar span,
 #__rdly #__rdly_bar a,
 #__rdly #__rdly_bar li {
 	font-size: 36px;
-}
-
-#__rdly #__rdly_bar {
-	border-bottom: 1px solid gray;
 }
 
 

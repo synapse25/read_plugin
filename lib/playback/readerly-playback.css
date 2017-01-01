@@ -84,6 +84,10 @@
 /* ============================== */
 /* SKIN */
 /* ============================== */
+#__rdly_above_bar {
+	border-bottom: 0;
+}
+
 #__rdly_progress {
 	border-bottom: 1px solid gray;
 }

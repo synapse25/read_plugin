@@ -64,7 +64,7 @@
     overflow: hidden;
 }
 
-#__rdly_settings_container.__rdly-settings-open {
+#__rdly_settings_container {
 	max-height: 50em;
     /*transition: max-height 1s linear;*/
 	/* temp */
@@ -133,13 +133,12 @@
 /* ============================== */
 /* SKIN */
 /* ============================== */
+/*#__rdly_below_bar .__rdly-section-open {
+  border-bottom: 0;
+}*/
 
 #__rdly_settings_container {
 	background-color: rgba( 230, 230, 230, 1);
-}
-/* Don't show border when closed, just open */
-#__rdly_settings_container.__rdly-settings-open {
-	border-top: 1px solid gray;
 }
 
 #__rdly_settings_tabs {
