@@ -15,27 +15,28 @@
 
 (function(){
 
-
 	// ============== SETUP ============== \\
-	var unfluff = require('@knod/unfluff'),
-		detect 	= require('detect-lang'),
-		Storage = require('./lib/ReaderlyStorage.js');
+	var unfluff 	= require('@knod/unfluff'),
+		detect 		= require('detect-lang'),
+		Storage 	= require('./lib/ReaderlyStorage.js'),
+		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Speed 		= require('./lib/settings/SpeedSettings.js');
+
+	var queue, storage, timer, coreDisplay, playback, settings, speed;
 
 
-	var queue, storage, timer, mainDisplay, playback, settings, speed;
-	
 	var afterLoadSettings = function ( oldSettings ) {
-		console.log('old settings:', oldSettings );
-		timer 		= new ReaderlyTimer( oldSettings, storage )
-		mainDisplay = new ReaderlyDisplay( timer ),
-		playback 	= new ReaderlyPlayback( timer, mainDisplay ),
-		settings 	= new ReaderlySettings( timer, mainDisplay ),
-		speed 		= new SpeedSettings( timer, settings );
+		timer 		= new Timer( oldSettings, storage )
+		coreDisplay = new ReaderlyDisplay( timer ),
+		playback 	= new Playback( timer, coreDisplay ),
+		settings 	= new ReaderlySettings( timer, coreDisplay ),
+		speed 		= new Speed( timer, settings );
 	};  // End afterLoadSettings()
 
 
 	var addEvents = function () {
-		$(timer).on( 'starting', function showLoading() { mainDisplay.wait(); })
+		$(timer).on( 'starting', function showLoading() { playback.wait(); })
 	};  // End addEvents()
 
 
@@ -88,8 +89,8 @@
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
 
-		mainDisplay.show();
-		mainDisplay.wait();
+		coreDisplay.show();
+		playback.wait();  // Do we need this?
 
 		var func = request.functiontoInvoke;
 		if ( func === "readSelectedText" ) {
@@ -107,7 +108,7 @@
 
 			var sampleText = smallSample( $clean );
 
-			detect( sampleText ).then(function (data) {
+			detect( sampleText ).then(function afterLanguageDetection(data) {
 				var lang = data.iso6391 || 'en',
 					cmds = unfluff.lazy( $clean.html(), lang ),
 					data = cmds.text();
