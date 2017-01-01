@@ -98,6 +98,7 @@
 * - Long word delay not working? How about otherPunc? And do more
 * 	symbols need to be included in that set of otherPunc?
 * - Implement more robust pausing (store in bool and wait for appropriate time)
+* - Scrubbing doesn't restart the slow-start value
 * 
 * NOTES:
 * - Always return Timer so functions can be chained
@@ -154,6 +155,7 @@
 			rTim._timer 	 = null;
 			rTim._isPlaying  = false;
 			rTim._wasPlaying = false;
+			rTim._goToEngaged 	= false;
 			rTim._isRestarting 	= false;
 			rTim._stepOperation = 'next';
 
@@ -196,8 +198,9 @@
 		// ============== FLOW CONTROL ============== \\
 		
 		rTim.start = function (queue) {
-			// Put queue in here, so that a Timer doesn't
+			// Queue is passed in here, so that a Timer doesn't
 			// have to be destroyed every time something new is read
+
 			if (!queue) {
 				console.error( "No readable object was passed into ReaderlyTimer. `queue`:", rTim._queue );
 				return null;
@@ -245,15 +248,21 @@
 		// means the "play" image won't fire off on restarts, even though
 		// it feels like it should always fire on play.
 		rTim.play = function ( noEvent ) {
+			// "play" will always be forward. "rewind" can be play, but with "prev".
+			rTim._stepOperation = 'next';
 			// We get a playing event as long as playing is happening
 			// Hack or fix?
 			if (rTim._isPlaying) {
+				// There must be a better way to keep the "play"
+				// icon from appearing.
 				if (!noEvent) $(rTim).trigger( 'playing', [rTim] );
 				if (!noEvent) $(rTim).trigger( 'played', [rTim] );  // This second one too?
 				// ??: they should go as a pair, but nothing done in between.
 				// Maybe 'played' should be in the loop? Makes no sense.
 			}
 
+			// Make sure not to trigger multiple loops, increasing
+			// the speed every time.
 			if ( !rTim._isPlaying && !rTim.done ) {
 				if (!noEvent) $(rTim).trigger( 'playing', [rTim] );
 				rTim._isPlaying = true;
@@ -266,15 +275,20 @@
 		};  // End rTim.play()
 
 
+		// TODO: Add generic function for pause, stop, and close
+
+
 		rTim.pause = function ( noEvent ) {
-			// noEvent can prevent pause from triggering (e.g. when called by `.stop()`)
+			// noEvent can prevent pause from triggering (e.g. when
+			// called by `.stop()`). There must be a better way to
+			// avoid having the "pause" icon appear
 			if (!noEvent) $(rTim).trigger( 'pausing', [rTim] )
 
 			clearTimeout(rTim._timer);
 			rTim._isPlaying = false;
-			// Start slow when user presses play (restore countdown)
+			// Start slow when next go through loop (restore countdown)
 			// TODO: Start only half slowed down? delay/2?
-			// delay/(1/time elapsed max slowStartDelay)?
+			// delay/(1/time elapsed max slowStartDelay)? (snap to 0 at some point)
 			rTim._tempStartDelay = _rSetts.slowStartDelay;
 
 			if (!noEvent) $(rTim).trigger( 'paused', [rTim] )
@@ -287,29 +301,35 @@
 		// 'section of document'? An index number?
 		// ??: How to give useful feedback from this?
 			if ( rTim._queue ) {
+
+				if ( !rTim._goToEngaged ) {
+					rTim._wasPlaying = rTim._isPlaying;
+					rTim.pause( true );
+					rTim._goToEngaged = true;
+				}
+
 				rTim._queue.goTo( playbackObj );
+				rTim._stepOperation = 'current';
 				rTim.once();
 			}
 			return rTim;
 		};  // End rTim.goTo()
 
-		rTim.engageGoTo = function () {
-			rTim._wasPlaying 	= rTim._isPlaying;
-			rTim._stepOperation = 'current';
-			rTim.pause( true );
-			return rTim;
-		};  // End rTim.engageGoTo()
-
 		rTim.disengageGoTo = function () {
-			rTim._stepOperation = 'next';
+			// // ??: Should this be always done in .play? Does "play" always mean go
+			// // forward? Doesn't it just mean "trigger loop"? ._loop() is "trigger
+			// // loop".
+			// rTim._stepOperation = 'next';
 			if ( rTim._wasPlaying ) { rTim.play( true ); }
+			rTim._goToEngaged = false;
+			return rTim;
 		};
 
 
 		rTim.stop = function () {
 		// Just another name for .pause() that people may want
 			$(rTim).trigger( 'stopping', [rTim] );
-			rTim.pause( true );
+			rTim.pause( true );  // Is this really legit?
 			$(rTim).trigger( 'stopped', [rTim] );
 			return rTim;
 		};
@@ -322,7 +342,7 @@
 			return rTim;
 		};
 
-		rTim.calcDelay = function () {
+		rTim.calcDelay = function ( justOnce ) {
 			var delay = rTim.delay;
 
 			var frag  = rTim._currentWordFragment;  // Current word fragment
@@ -334,7 +354,9 @@
 
 			// Speeds up a big each time the loop is called
 			var extraDelay 		 = rTim._tempStartDelay;
-			rTim._tempStartDelay = Math.max( 1, extraDelay / 1.5 );
+			// Make sure startDelay isn't used up by things like .once() called
+			// repeatedly, like with scrubber
+			if (!justOnce) {rTim._tempStartDelay = Math.max( 1, extraDelay / 1.5 );}
 			delay 				 = delay * rTim._tempStartDelay;
 
 			return delay;
@@ -353,13 +375,12 @@
 				return rTim;
 			}
 
-			// Otherwise keep going
 			$(rTim).trigger( 'loopStart', [rTim] );
 
 			// "next", "prev", or "current" word fragment
-			rTim._currentWordFragment = rTim._queue[ rTim._stepOperation ]();
-			var delay = rTim.calcDelay();
-			if ( !justOnce ) { rTim._timer = setTimeout( rTim._loop, delay ); }
+			rTim._currentWordFragment 		= rTim._queue[ rTim._stepOperation ]();
+			var delay = rTim.calcDelay( justOnce );
+			if ( !justOnce ) { rTim._timer 	= setTimeout( rTim._loop, delay ); }
 
 			// Do it after setTimeout so that you can easily pause on "newWordFragment"
 			// Feels weird, though
@@ -496,7 +517,7 @@
 
 	"use strict";
 
-	var ReaderlyPlayback = function ( timer, displayCore ) {
+	var ReaderlyPlayback = function ( timer, coreDisplay ) {
 
 		var rPly = {};
 
@@ -619,15 +640,12 @@
 				$(textButton).html( chars );
 				rPly.stopWaiting();
 			}
-			// return text;
+			// return chars;
 			return rPly;
 		};
 
 
 		rPly._showProgress = function ( evnt, timer, fraction, indx ) {
-			// // var percent = fraction * 100;
-			// // $(percentDone).css('width', percent + '%' );
-
 			if ( !rPly.isScrubbing ) {  // Don't mess timing up with transitions
 				progressNode.noUiSlider.set( indx );  // version 8 nouislider
 			}
@@ -644,14 +662,23 @@
 		$(timer).on( 'started', rPly._start );
 
 
-		rPly._startScrubbing = function ( evnt ) {
+		// --------- SCRUBBER EVENTS --------- \\
+		rPly._startScrubbing = function ( values, handle ) {
 			rPly.isScrubbing = true;
-			timer.engageGoTo();
 			return rPly;
 		};  // End rPly._startScrubbing()
 
 
-		rPly._stopScrubbing = function ( evnt ) {
+		rPly._updateScrubbedWords = function ( values, handle ) {
+			timer.goTo({
+				type: 'index',
+				amount: parseInt(values[handle])
+			});
+			return rPly;
+		};
+
+
+		rPly._stopScrubbing = function ( values, handle ) {
 			rPly.isScrubbing = false;
 			timer.disengageGoTo();
 			return rPly;
@@ -661,7 +688,7 @@
 		// =========== INITIALIZE =========== \\
 
 		rPly._progressSlider = function ( progNode ) {
-		/* ( {} ) -> ?
+		/* ( DOM Node ) -> same DOM Node
 		* 
 		* Turn the given data into one noUiSlider slider
 		*/
@@ -672,9 +699,9 @@
 				range: { min: 0, max: 1 },
 				start: 0,
 				step: 1,
-				connect: 'lower',
+				connect: [true, false],
 				handles: 1,
-				behaviour: 'extend-tap'
+				behaviour: 'tap'
 			});
 
 			return progNode;
@@ -688,13 +715,8 @@
 
 			// Scrubber events
 			progressNode.noUiSlider.on( 'start', rPly._startScrubbing );
-			progressNode.noUiSlider.on( 'end', rPly._stopScrubbing );
-			progressNode.noUiSlider.on( 'slide', function updatePos( values, handle ) {
-				timer.goTo({
-					type: 'index',
-					amount: parseInt(values[handle])
-				});
-			});
+			progressNode.noUiSlider.on( 'slide', rPly._updateScrubbedWords );
+			progressNode.noUiSlider.on( 'change', rPly._stopScrubbing );
 
 			// DOM events
 			$(textButton).on( 'touchend click', rPly._togglePlayPause );
@@ -704,18 +726,14 @@
 		};
 
 
-		rPly._init = function ( displayCore ) {
+		rPly._init = function ( coreDisplay ) {
 
-			// Why is this here? Because it's going to be a rewind/fastforward
-			// control in the future
 			progressNode = nodes.progressNode = $(progStr)[0];
-			// percentDone = nodes.percentDone = $(progress).find('#__rdly_percent_done')[0];
-			// scrubber 	= nodes.scrubber 	= $(progress).find('#__rdly_scrubber')[0];
 			rPly._progressSlider( progressNode );
 
+			indicator = nodes.indicator = $(indicatorStr)[0];
 			// ??: Should this really be a button? How do the rest of the controls fit into this?
 			// ??: Should there just be an invisible set of controls that accessible aids can grab hold of
-			indicator 	= nodes.indicator 	= $(indicatorStr)[0];
 			textButton 	= nodes.textButton 	= $(textButtonStr)[0];
 			loading 	= nodes.loading 	= $(loadingStr)[0];
 
@@ -724,12 +742,11 @@
 			pauseFeedback 		= nodes.pauseFeedback 		= $(playPauseFeedback).find('#__rdly_pause_feedback')[0];
 
 			// // Go in .rdly-bar-center .rdly-below?
-			// // 'play' and 'pause' are also triggered by clicking on the text
 			// controls = nodes.controls = $(controlsStr)[0];
 
 			restart = nodes.restart = $(restartStr)[0];
 
-			var coreNodes = displayCore.nodes;
+			var coreNodes = coreDisplay.nodes;
 			$(progressNode).appendTo( coreNodes.above );
 			$(playPauseFeedback).appendTo( coreNodes.barCenter );
 
@@ -748,7 +765,7 @@
 
 		// =========== ADD NODE, ETC. =========== \\
 		// Don't show at start, only when prompted
-		rPly._init( displayCore );
+		rPly._init( coreDisplay );
 
 		// To be called in a script
 		return rPly;
