@@ -1084,7 +1084,6 @@ body {\
 
 		// --------- SCRUBBER EVENTS --------- \\
 		rPly._startScrubbing = function ( values, handle ) {
-			console.log('starting')
 			rPly.isScrubbing = true;
 			return rPly;
 		};  // End rPly._startScrubbing()
@@ -47512,6 +47511,7 @@ return jQuery;
 
 	'use strict';
 
+	var document;
 
 	// Creates a node, adds it to target, returns the new node.
 	function addNodeTo ( target, className ) {
@@ -48979,7 +48979,8 @@ function closure ( target, options, originalOptions ){
 
 	// Unbind move events on document, call callbacks.
 	function eventEnd ( event, data ) {
-
+// console.log(event.target);
+// var document = event.target.ownerDocument;
 		// The handle is no longer active, so remove the class.
 		if ( scope_ActiveHandle ) {
 			removeClass(scope_ActiveHandle, options.cssClasses.active);
@@ -49011,7 +49012,8 @@ function closure ( target, options, originalOptions ){
 
 	// Bind move events on document.
 	function eventStart ( event, data ) {
-
+// console.log(event.target);
+// var document = event.target.ownerDocument;
 		if ( data.handleNumbers.length === 1 ) {
 
 			var handle = scope_Handles[data.handleNumbers[0]];
@@ -49597,7 +49599,7 @@ function closure ( target, options, originalOptions ){
 
 	// Run the standard initializer
 	function initialize ( target, originalOptions ) {
-
+		document = target.ownerDocument;
 		if ( !target.nodeName ) {
 			throw new Error('noUiSlider.create requires a single element.');
 		}
