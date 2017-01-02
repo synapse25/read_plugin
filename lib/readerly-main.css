@@ -13,6 +13,19 @@
 /* ============================== */
 /* STRUCTURE */
 /* ============================== */
+#__rdly_iframe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	border: 0;
+	width: 100%;
+	min-height: 16.1em;
+    max-height: 100rem;
+}
+body {
+	margin: 0;
+}
+
 #__rdly,
 #__rdly * {
 	box-sizing: border-box;
@@ -20,7 +33,7 @@
 
 #__rdly {
 	display: block;
-	position: fixed;
+	/*position: fixed;*/
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -35,7 +48,7 @@
 	position: relative;
 }
 
-/* Should be "top" and "bottom" instead? */
+/* Should be 'top' and 'bottom' instead? */
 #__rdly #__rdly_above_bar {
 	top: 0;
 	/* function */
@@ -108,7 +121,7 @@
 #__rdly a,
 #__rdly li {
 	/* font defaults from chrome inspection */
-	font-family: "droid", serif;
+	font-family: 'droid', serif;
 	font-size: 16px;
 	line-height: normal;
 	font-style: normal;
