@@ -35,9 +35,7 @@
 		rDis._toClose = [];
 
 
-		var iframeStr = '<iframe id="__rdly_iframe"><html><head>\
-	<link rel="stylesheet" href="readerly-main.css">\
-</head><body></body></head></iframe>';
+		var iframeStr = '<iframe id="__rdly_iframe"></iframe>';
 
 		var cssStr = '<style>' + coreCSSstr + '\n' + nouiCSSstr + '</style>';
 
@@ -60,7 +58,7 @@
 	<div id="__rdly_below_bar" class="__rdly-main-section __rdly-hidden"></div>\
 </div>';
 
-		var readerly, textElems;//, textNode, loading, percentDone;
+		var readerly, textElems, $iframe;
 
 		// =========== HOOKS =========== \\
 
@@ -85,14 +83,13 @@
 
 
 		rDis.show = function () {
-			console.log($(readerly))
-			$(readerly).slideDown( 200 );
+			$(readerly).slideDown( 200, rDis.update );
 			return rDis;
 		};
 
 
 		rDis.hide = function () {
-			$(readerly).slideUp( 200 );
+			$(readerly).slideUp( 200, rDis.update );
 			return rDis;
 		};
 
@@ -103,11 +100,27 @@
 		};
 
 
+		// iframe element
+		rDis.resizeIframe = function () {
+			$iframe[0].style.height = readerly.scrollHeight + 'px';
+			return rDis;
+		};
+
+
+		rDis.update = function () {
+		// Callable from outside to have the display reset what it needs to reset
+			rDis.resizeIframe();
+			return rDis;
+		};
+
+
 
 		// =========== INITIALIZE =========== \\
 
 		rDis._addEvents = function () {
 			$('#__rdly_close').on( 'click', rDis.close );
+			$(readerly).on( 'mousedown mouseup mousemove', rDis.update );
+			$(window).on( 'resize', rDis.update );
 			return rDis;
 		};
 
@@ -116,7 +129,7 @@
 
 			if (!parentNode) { parentNode = $(document.body)[0] }
 
-			var $iframe = $(iframeStr);
+			$iframe = $(iframeStr);
 			$iframe.appendTo( parentNode );
 
 			var doc  = $iframe[0].contentDocument;
@@ -160,7 +173,7 @@
 					// Create parent object instead?
 					.addToClosingQueue( timer );
 				// This should not be visible until it's .show()n
-				$(readerly).hide(0)
+				$(readerly).hide(0, rDis.update )
 				// $('#__rdly_iframe').hide(0);
 			}
 			return rDis;
@@ -711,13 +724,10 @@
 	position: fixed;\
 	top: 0;\
 	left: 0;\
-	border: 0;\
 	width: 100%;\
-	min-height: 16.1em;\
-    max-height: 100rem;\
 }\
 body {\
-	margin: 0;\
+	height: 100%;\
 }\
 \
 #__rdly,\
@@ -810,6 +820,13 @@ body {\
 /* ============================== */\
 /* SKIN */\
 /* ============================== */\
+#__rdly_iframe {\
+	border: 0;\
+}\
+body {\
+	margin: 0;\
+}\
+\
 #__rdly div,\
 #__rdly span,\
 #__rdly a,\
@@ -1313,6 +1330,8 @@ body {\
 }\
 \
 #__rdly_progress {\
+	border:0;\
+	border-top: 1px solid gray;\
 	border-bottom: 1px solid gray;\
 }\
 #__rdly_percent_done {\
@@ -1526,6 +1545,7 @@ body {\
 			$(coreDisplay.nodes.below).removeClass('__rdly-hidden');
 			$(opener).addClass( '__rdly-active-ui' );  // different style
 			rSet._isOpen = true;
+			coreDisplay.update();
 			return rSet;
 		};
 
@@ -1534,6 +1554,7 @@ body {\
 			$(coreDisplay.nodes.below).addClass('__rdly-hidden');
 			$(opener).removeClass( '__rdly-active-ui' );  // different style
 			rSet._isOpen = false;
+			coreDisplay.update();
 			return rSet;
 		};
 
