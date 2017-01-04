@@ -22,6 +22,8 @@
 }
 body {
 	height: 100%;
+	/* !!!! Not on the parent site please! !!!! */
+	/*overflow: hidden;*/
 }
 
 #__rdly,
