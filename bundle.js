@@ -727,6 +727,7 @@
 /* ============================== */\
 #__rdly_iframe {\
 	position: fixed;\
+	max-height: 100%;\
 	top: 0;\
 	left: 0;\
 	width: 100%;\
@@ -744,7 +745,8 @@ body {\
 \
 #__rdly {\
 	display: block;\
-	/*position: fixed;*/\
+	max-height: 100%;\
+	overflow: scroll;\
 	top: 0;\
 	left: 0;\
 	width: 100%;\

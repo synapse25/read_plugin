@@ -15,14 +15,15 @@
 /* ============================== */
 #__rdly_iframe {
 	position: fixed;
+	max-height: 100%;
 	top: 0;
 	left: 0;
 	width: 100%;
 	z-index: 4300200100;
 }
 body {
-	height: 100%;
 	/* !!!! Not on the parent site please! !!!! */
+	/*height: 100%;*/
 	/*overflow: hidden;*/
 }
 
@@ -33,7 +34,8 @@ body {
 
 #__rdly {
 	display: block;
-	/*position: fixed;*/
+	max-height: 100%;
+	overflow: scroll;
 	top: 0;
 	left: 0;
 	width: 100%;
