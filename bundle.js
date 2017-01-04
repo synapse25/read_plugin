@@ -35,7 +35,7 @@
 		rDis._toClose = [];
 
 
-		var iframeStr = '<iframe id="__rdly_iframe"></iframe>';
+		var iframeStr = '<iframe id="__rdly_iframe" title="Readerly article reader."></iframe>';
 
 		var cssStr = '<style>' + coreCSSstr + '\n' + nouiCSSstr + '</style>';
 
