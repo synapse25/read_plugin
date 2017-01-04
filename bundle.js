@@ -122,7 +122,7 @@
 		// =========== INITIALIZE =========== \\
 
 		rDis._addEvents = function () {
-			$('#__rdly_close').on( 'click', rDis.close );
+			$(rDis.nodes.close).on( 'click', rDis.close );
 			$(readerly).on( 'mousedown mouseup mousemove', rDis.update );
 			$(window).on( 'resize', rDis.update );
 			// Event for content zooming?
@@ -162,6 +162,7 @@
 				rightOfText: 	$(readerly).find('#__rdly_right_text_elements')[0],
 				belowText: 		$(readerly).find('#__rdly_below_text_elements')[0],
 				barRight: 		$(readerly).find('.__rdly-bar-right')[0],
+				close: 			$(readerly).find('#__rdly_close')[0],
 				below: 			$(readerly).find('#__rdly_below_bar')[0]
 			}
 
@@ -1481,8 +1482,8 @@ body {\
 
 		rSet._showMenu = function ( evnt ) {
 			var id 		 = evnt.target.id,
-				$menus 	 = $('.__rdly-settings-menu'),
-				$tabs 	 = $('.__rdly-settings-tab'),
+				$menus 	 = $(menus),
+				$tabs 	 = $(tabs),
 				thisMenu = rSet.menuNodes[ id ],
 				$thisTab = $tabs.find('#' + id + '_tab');
 
@@ -1497,12 +1498,11 @@ body {\
 		};
 
 		rSet.destroyMenu = function ( evnt ) {
-			var tabID = evnt.target.id,  // jQuery element? Need to get [0] item?
-				itemNode = 
+			var id = evnt.target.id;  // jQuery element? Need to get [0] item?
 
-			$(rSet.menuNodes[ tabID ]).remove();
-			rSet.menuNodes[ tabID ] = null;
-			$('#' + tabID ).remove();
+			$(rSet.menuNodes[ id ]).remove();
+			rSet.menuNodes[ id ] = null;
+			$($(tabs).find('#' + id + '_tab' )).remove();
 
 			return rSet;
 		};
@@ -1538,8 +1538,7 @@ body {\
 			$newNode.addClass( '__rdly-settings-menu' );
 
 			$(menus).append( $newNode );
-			$newNode[0].addEventListener( 'destroyOneSettingsMenu', rSet._removeMenu, false );
-			// rSet.menuNodes[ id ] = node;
+			$newNode[0].addEventListener( 'destroyOneSettingsMenu', rSet._removeMenu, false );  // TODO: Remove this line
 			rSet.settings[ menu.id ] = menu;
 
 			var $tab = rSet._addTab( id, tabText );
@@ -1625,19 +1624,19 @@ body {\
 		};
 
 		rSet._destroy = function () {
-			$('#__rdly_open_settings').remove();
-			$('#__rdly_settings_container').remove();
+			opener.remove();
+			container.remove();
 
-			$('#__rdly').off( rSet._onBlur );
+			// $('#__rdly').off( rSet._onBlur );
 
 			return rSet;
 		};
 
 		rSet._init = function ( coreDisplay ) {
 
-			// Not sure yet why you'd want to rebuild this object from
-			// scratch, but going to offer the option for now
-			if ( $('#__rdly_open_settings') ) { rSet._destroy(); }
+			// // Not sure yet why you'd want to rebuild this object from
+			// // scratch, but going to offer the option for now
+			// if ( $('#__rdly_open_settings') ) { rSet._destroy(); }
 
 			rSet._addBase( coreDisplay )
 				._addEvents();
