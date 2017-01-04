@@ -8,6 +8,10 @@
 * 
 * NOTES:
 * - name - ReaderlyBar? ReaderlySee?
+* 
+* TODO:
+* - Consider prepending main element as opposed to appending it. Possibly
+* 	easer for screen readers to find more quickly.
 */
 
 (function (root, displayFactory) {  // root is usually `window`
@@ -121,6 +125,7 @@
 			$('#__rdly_close').on( 'click', rDis.close );
 			$(readerly).on( 'mousedown mouseup mousemove', rDis.update );
 			$(window).on( 'resize', rDis.update );
+			// Event for content zooming?
 			return rDis;
 		};
 
@@ -725,6 +730,7 @@
 	top: 0;\
 	left: 0;\
 	width: 100%;\
+	z-index: 4300200100;\
 }\
 body {\
 	height: 100%;\
@@ -742,7 +748,6 @@ body {\
 	left: 0;\
 	width: 100%;\
 	transition: top 100ms linear;\
-	z-index: 4300200100;\
 }\
 \
 .__rdly-main-section {\
