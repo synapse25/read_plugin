@@ -87,6 +87,7 @@
 
 
 		rDis.show = function () {
+			console.log('nllskfj')
 			$(readerly).slideDown( 200, rDis.update );
 			return rDis;
 		};
@@ -137,11 +138,9 @@
 			// scrollable node's height (not contents) in order to fit on the page.
 				diff 			= (potentialBottom - windowBottom);
 
-			// We took care of the top, but all the padding/borders/etc
-			// on the bottom are unaccounted for. In some browsers, these
-			// will get cut early if the height isn't adjusted, so
-			// calculate for them.
-
+			// Have taken care off stuff above and in the contents
+			// Now will account for all the padding/borders, etc at
+			// the bottom that may otherwise get cut off in some browsers
 			var scrollBottom = scrollRect.bottom,
 			// The bottom of the outer-most node, so we can pull everything
 			// up to be visible
@@ -149,10 +148,13 @@
 				bottomDiff 	 = outerBottom - scrollBottom;
 
 			diff = diff + bottomDiff;
-			var newHeight = height;
 
-			// Shrink if needed, don't grow if it's short
-			if ( diff > 0 ) { newHeight = height - diff; }
+			// If there's no height adjusting to do, do not adjust heights
+			// Also - shrink if needed, don't grow if it's short
+			if ( diff <= 0 ) { return rDis; }
+
+
+			var newHeight = height - diff;
 			scrollable.style.height = newHeight + 'px';
 
 			// Since the outer element is being used to determine the height of
