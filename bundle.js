@@ -104,16 +104,68 @@
 		};
 
 
-		// iframe element
-		rDis.resizeIframe = function () {
-			$iframe[0].style.height = readerly.scrollHeight + 'px';
+		// iframe element sizing
+		// https://jsfiddle.net/fpd4fb80/24/
+		rDis.sizeIframeAndContents = function () {
+
+			// There should only be one (for now...)
+			var bar 		= rDis.nodes.bar,
+				grower 		= $(readerly).find('.__rdly-to-grow')[0];
+
+			if ( !grower ) { return rDis; }
+
+			var scrollable 	= $(grower).parent()[0],
+				scrollRect 	= scrollable.getBoundingClientRect();
+
+			// Get the difference between where the lowest unscrolled
+			// point would be and where the lowest visible point is
+
+			// Takes into account everything above the scrollable element
+			// including borders/padding/etc.
+			var top 			= scrollRect.top,
+			// Takes into account the height of the element that's
+			// currently going to be scrolled
+				height 			= grower.getBoundingClientRect().height,
+			// The bottom of where the contents would end if you weren't
+			// scrolled and no adjustments for size were made.
+				potentialBottom = top + height,
+			// The bottom of the the visible window
+				windowBottom 	= document.documentElement.clientHeight,
+			// How much needs to be subtracted (almost, see below) from the
+			// scrollable node's height (not contents) in order to fit on the page.
+				diff 			= (potentialBottom - windowBottom);
+
+			// We took care of the top, but all the padding/borders/etc
+			// on the bottom are unaccounted for. In some browsers, these
+			// will get cut early if the height isn't adjusted, so
+			// calculate for them.
+
+			var scrollBottom = scrollRect.bottom,
+			// The bottom of the outer-most node, so we can pull everything
+			// up to be visible
+				outerBottom  = readerly.getBoundingClientRect().bottom,
+				bottomDiff 	 = outerBottom - scrollBottom;
+
+			diff = diff + bottomDiff;
+			var newHeight = height;
+
+			// Shrink if needed, don't grow if it's short
+			if ( diff > 0 ) { newHeight = height - diff; }
+			scrollable.style.height = newHeight + 'px';
+
+			// Since the outer element is being used to determine the height of
+			// the iframe, I assume it's at the very top of the iframe, so no
+			// extra 'outer top' value needs to be subtracted.
+			var currentOuterHeight = top + newHeight + bottomDiff
+			$iframe[0].style.height = currentOuterHeight + 'px';
+
 			return rDis;
-		};
+		};  // End rDis.sizeIframeAndContents()
 
 
 		rDis.update = function () {
 		// Callable from outside to have the display reset what it needs to reset
-			rDis.resizeIframe();
+			rDis.sizeIframeAndContents();
 			return rDis;
 		};
 
@@ -690,8 +742,12 @@
 }));
 
 },{"jquery":143}],4:[function(require,module,exports){
-// core-CSS.js
-// css that's bundleable
+/* core-CSS.js
+* css that's bundleable
+* 
+* Scroll bars issue:
+* https://jsfiddle.net/fpd4fb80/4/ <- height of iframe has to be 100%
+*/
 
 (function (root, coreCSSFactory) {  // root is usually `window`
     if (typeof define === 'function' && define.amd) {
@@ -728,13 +784,12 @@
 /* ============================== */\
 #__rdly_iframe {\
 	position: fixed;\
-	max-height: 100%;\
 	top: 0;\
 	left: 0;\
 	width: 100%;\
 	z-index: 4300200100;\
 }\
-body {\
+html, body {\
 	height: 100%;\
 	overflow: hidden;\
 }\
@@ -745,9 +800,9 @@ body {\
 }\
 \
 #__rdly {\
-	display: block;\
+	display: flex;\
+	flex-direction: column;\
 	max-height: 100%;\
-	overflow: scroll;\
 	top: 0;\
 	left: 0;\
 	width: 100%;\
@@ -768,13 +823,14 @@ body {\
 	z-index: 50;\
 }\
 \
-#__rdly #__rdly_below_bar {\
+#__rdly_below_bar {\
 	top: 100%;\
+	display: flex;\
 }\
 \
 #__rdly #__rdly_bar {\
 	/* ??: Will this work if font-size is declared lower down? */\
-	height: 2em;\
+	min-height: 2em;\
 	text-align: center;\
 }\
 \
@@ -928,6 +984,17 @@ body {\
 @keyframes spin {\
 	100%\
 	{ transform:rotate(360deg); }\
+}\
+\
+#__rdly .__rdly-scrollable-y {\
+	display: block;\
+	overflow-y: scroll;\
+	overflow-x: hidden;\
+}\
+\
+#__rdly .__rdly-scrollable-y > * {\
+	height: auto;\
+	overflow: visible;\
 }\
 ";
 
@@ -1481,15 +1548,22 @@ body {\
 		};
 
 		rSet._showMenu = function ( evnt ) {
-			var id 		 = evnt.target.id,
-				$menus 	 = $(menus),
+		// Sent from a tab, DOES NOT SHOW THE NODE THAT CONTAINS ALL THE MENUS
+		// Shows one individual menu, hiding the other menu nodes
+			var $thisTab = $(evnt.target),
+				id 		 = evnt.target.id.replace(/_tab$/, ''),
+				$menus 	 = $(menus).find( '.__rdly-settings-menu' ),
 				$tabs 	 = $(tabs),
-				thisMenu = rSet.menuNodes[ id ],
-				$thisTab = $tabs.find('#' + id + '_tab');
+				thisMenu = rSet.menuNodes[ id ];
 
 			// Hide all, then show this one
 			$menus.addClass( '__rdly-hidden' );
 			$(thisMenu).removeClass( '__rdly-hidden' );
+			// There should only be one (for now...). It's height gets adjusted.
+			// Should only have one child, which can grow.
+			$menus.removeClass( '__rdly-to-grow' );
+			$(thisMenu).addClass( '__rdly-to-grow' );
+
 			// Same type of thing, showing this tab as active
 			$tabs.removeClass( '__rdly-active-ui' );
 			$thisTab.addClass( '__rdly-active-ui' );
@@ -1533,15 +1607,21 @@ body {\
 				return node;
 			}
 
+			rSet.menuNodes[ id ] = node;
+
 			// Otherwise keep going
 			var $newNode = $(node);
 			$newNode.addClass( '__rdly-settings-menu' );
+			// $newNode.addClass( '__rdly-settings-menu __rdly-scrollable-y-contents' );
 
 			$(menus).append( $newNode );
 			$newNode[0].addEventListener( 'destroyOneSettingsMenu', rSet._removeMenu, false );  // TODO: Remove this line
 			rSet.settings[ menu.id ] = menu;
 
 			var $tab = rSet._addTab( id, tabText );
+
+			// Show the first menu added
+			$($(tabs).children()[0]).trigger( 'click' );
 
 			return rSet;
 		};  // End rSet.addMenu()
@@ -1602,7 +1682,7 @@ body {\
 			var $open = $('<button id="__rdly_open_settings" class="__rdly-big-menu-button">Set</button>'),
 				$cont = $('<div id="__rdly_settings_container"></div>'),
 				$taby = $('<div id="__rdly_settings_tabs"></div>'),
-				$sets = $('<div id="__rdly_settings_menus"></div>');
+				$sets = $('<div id="__rdly_settings_menus" class="__rdly-scrollable-y"></div>');
 
 			var coreNodes 	= coreDisplay.nodes,
 				head 		= coreNodes.head,
@@ -2237,20 +2317,14 @@ body {\
 /* Solution to transition? https://stackoverflow.com/questions/3508605/how-can-i-transition-height-0-to-height-auto-using-css#8331169 */\
 /* See comments on the thread */\
 #__rdly_settings_container {\
-	width: 100%;\
-    max-height: 0;\
-    /*transition: max-height 1s linear;*/\
-    overflow: hidden;\
+  width: 100%;\
+  display: flex;\
+  flex-direction: column;\
 }\
 \
-#__rdly_settings_container {\
-	max-height: 50em;\
-    /*transition: max-height 1s linear;*/\
-	/* temp */\
-	/*min-height: 3em;*/\
-}\
-\
-#__rdly_settings_tabs, #__rdly_settings_menus, .__rdly_settings_menu {\
+#__rdly_settings_tabs,\
+#__rdly_settings_menus,\
+.__rdly_settings_menu {\
 	position: relative;\
 	width: 100%;\
 }\
@@ -2273,10 +2347,10 @@ body {\
 }\
 \
 #__rdly .__rdly-settings-menu {\
-	position: relative;\
-	display: flex;\
-	flex-wrap: wrap;\
-	justify-content: space-around;\
+  position: relative;\
+  display: flex;\
+  flex-wrap: wrap;\
+  justify-content: space-around;\
   padding: 0 .5%;\
 }\
 \

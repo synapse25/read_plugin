@@ -15,13 +15,16 @@
 /* ============================== */
 #__rdly_iframe {
 	position: fixed;
-	max-height: 100%;
 	top: 0;
 	left: 0;
 	width: 100%;
 	z-index: 4300200100;
+	/* Cannot get rid of scrollbars while retaining scrolling */
+	/* http://stackoverflow.com/questions/3296644/hiding-the-scrollbar-on-an-html-page */
+	/* https://stackoverflow.com/questions/16670931/hide-scroll-bar-but-still-being-able-to-scroll */
+	/* very simple example of alternative: https://jsfiddle.net/fpd4fb80/1/ */
 }
-body {
+html, body {
 	/* !!!! Not on the parent site please! !!!! */
 	/*height: 100%;*/
 	/*overflow: hidden;*/
@@ -33,9 +36,9 @@ body {
 }
 
 #__rdly {
-	display: block;
+	display: flex;
+	flex-direction: column;
 	max-height: 100%;
-	overflow: scroll;
 	top: 0;
 	left: 0;
 	width: 100%;
@@ -56,13 +59,14 @@ body {
 	z-index: 50;
 }
 
-#__rdly #__rdly_below_bar {
+#__rdly_below_bar {
 	top: 100%;
+	display: flex;
 }
 
 #__rdly #__rdly_bar {
 	/* ??: Will this work if font-size is declared lower down? */
-	height: 2em;
+	min-height: 2em;
 	text-align: center;
 }
 
@@ -216,4 +220,15 @@ body {
 @keyframes spin {
 	100%
 	{ transform:rotate(360deg); }
+}
+
+#__rdly .__rdly-scrollable-y {
+	display: block;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+#__rdly .__rdly-scrollable-y > * {
+	height: auto;
+	overflow: visible;
 }
