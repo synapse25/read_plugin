@@ -25,7 +25,7 @@
 #__rdly label,
 #__rdly input {
   /* font defaults from chrome inspection */
-  font-family: "droid", serif;
+  font-family: 'droid', serif;
   font-size: 16px;
   line-height: normal;
   font-style: normal;
@@ -59,19 +59,13 @@
 /* See comments on the thread */
 #__rdly_settings_container {
 	width: 100%;
-    max-height: 0;
-    /*transition: max-height 1s linear;*/
-    overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-#__rdly_settings_container {
-	max-height: 50em;
-    /*transition: max-height 1s linear;*/
-	/* temp */
-	/*min-height: 3em;*/
-}
-
-#__rdly_settings_tabs, #__rdly_settings_menus, .__rdly_settings_menu {
+#__rdly_settings_tabs,
+#__rdly_settings_menus,
+.__rdly_settings_menu {
 	position: relative;
 	width: 100%;
 }
@@ -94,10 +88,10 @@
 }
 
 #__rdly .__rdly-settings-menu {
-	position: relative;
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-around;
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
   padding: 0 .5%;
 }
 
