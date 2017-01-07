@@ -87,7 +87,6 @@
 
 
 		rDis.show = function () {
-			console.log('nllskfj')
 			$(readerly).slideDown( 200, rDis.update );
 			return rDis;
 		};
@@ -150,17 +149,18 @@
 			diff = diff + bottomDiff;
 
 			// If there's no height adjusting to do, do not adjust heights
+			// Otherwise it, among other things, won't re-open after closing
 			// Also - shrink if needed, don't grow if it's short
 			if ( diff <= 0 ) { return rDis; }
 
 
-			var newHeight = height - diff;
+			var newHeight 			= height - diff;
 			scrollable.style.height = newHeight + 'px';
 
 			// Since the outer element is being used to determine the height of
 			// the iframe, I assume it's at the very top of the iframe, so no
 			// extra 'outer top' value needs to be subtracted.
-			var currentOuterHeight = top + newHeight + bottomDiff
+			var currentOuterHeight 	= top + newHeight + bottomDiff
 			$iframe[0].style.height = currentOuterHeight + 'px';
 
 			return rDis;
@@ -178,8 +178,8 @@
 		// =========== INITIALIZE =========== \\
 
 		rDis._addEvents = function () {
-			$(rDis.nodes.close).on( 'click', rDis.close );
-			$(readerly).on( 'mousedown mouseup mousemove', rDis.update );
+			$(rDis.nodes.close).on( 'touchend click', rDis.close );
+			$(readerly).on( 'mousedown mouseup mousemove touchstart touchend', rDis.update );
 			$(window).on( 'resize', rDis.update );
 			// Event for content zooming?
 			return rDis;
@@ -1500,6 +1500,8 @@ body {\
 * 
 * TODO:
 * ??: Add events/buttons for things like opening and closing settings?
+* - ??: Don't close settings when closing readerly? If they were there
+* 	on close, should they be there on re-open?
 */
 
 (function (root, settingsFactory) {  // root is usually `window`
