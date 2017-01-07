@@ -87,12 +87,14 @@
 
 
 		rDis.show = function () {
+			$iframe.show();
 			$(readerly).slideDown( 200, rDis.update );
 			return rDis;
 		};
 
 
 		rDis.hide = function () {
+			$iframe.hide();
 			$(readerly).slideUp( 200, rDis.update );
 			return rDis;
 		};
@@ -235,6 +237,7 @@
 					// Create parent object instead?
 					.addToClosingQueue( timer );
 				// This should not be visible until it's .show()n
+				$iframe.hide();
 				$(readerly).hide(0, rDis.update )
 				// $('#__rdly_iframe').hide(0);
 			}
