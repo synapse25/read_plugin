@@ -8,6 +8,7 @@
 * - Trigger pause on clicking of central element, not
 * 	just text
 * - Add function "cleanHTML" to get rid of unwanted elements
+* - Remove html parsing from sbd node module
 * 
 * WARNING:
 * Storage is all user settings. Too cumbersome otherwise for now.
