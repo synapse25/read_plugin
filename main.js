@@ -8,6 +8,7 @@
 * - Trigger pause on clicking of central element, not
 * 	just text
 * - Add function "cleanHTML" to get rid of unwanted elements
+* - Remove html parsing from sbd node module
 * 
 * WARNING:
 * Storage is all user settings. Too cumbersome otherwise for now.
@@ -20,7 +21,9 @@
 		detect 		= require('detect-lang'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
 		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Display 	= require('./lib/ReaderlyDisplay.js'),
 		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Settings 	= require('./lib/settings/ReaderlySettings.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
 	var queue, storage, timer, coreDisplay, playback, settings, speed;
@@ -28,9 +31,9 @@
 
 	var afterLoadSettings = function ( oldSettings ) {
 		timer 		= new Timer( oldSettings, storage )
-		coreDisplay = new ReaderlyDisplay( timer ),
+		coreDisplay = new Display( timer ),
 		playback 	= new Playback( timer, coreDisplay ),
-		settings 	= new ReaderlySettings( timer, coreDisplay ),
+		settings 	= new Settings( timer, coreDisplay ),
 		speed 		= new Speed( timer, settings );
 	};  // End afterLoadSettings()
 

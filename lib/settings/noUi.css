@@ -142,7 +142,7 @@
 /* Handle stripes */
 .noUi-handle:before,
 .noUi-handle:after {
-  content: "";
+  content: '';
   display: block;
   position: absolute;
   height: 14px;

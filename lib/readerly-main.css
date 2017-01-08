@@ -13,44 +13,60 @@
 /* ============================== */
 /* STRUCTURE */
 /* ============================== */
+#__rdly_iframe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	z-index: 4300200100;
+	/* Cannot get rid of scrollbars while retaining scrolling */
+	/* http://stackoverflow.com/questions/3296644/hiding-the-scrollbar-on-an-html-page */
+	/* https://stackoverflow.com/questions/16670931/hide-scroll-bar-but-still-being-able-to-scroll */
+	/* very simple example of alternative: https://jsfiddle.net/fpd4fb80/1/ */
+}
+html, body {
+	/* !!!! Not on the parent site please! !!!! */
+	/*height: 100%;*/
+	/*overflow: hidden;*/
+}
+
 #__rdly,
 #__rdly * {
 	box-sizing: border-box;
 }
 
 #__rdly {
-	display: block;
-	position: fixed;
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
 	top: 0;
 	left: 0;
 	width: 100%;
 	transition: top 100ms linear;
-	z-index: 4300200100;
 }
 
-/* Should be top and bottom instead? */
-#__rdly #__rdly_above_bar,
-#__rdly #__rdly_below_bar {
-	position: relative;
+.__rdly-main-section {
 	width: 100%;
+	display: flex;
+	/* For absolutely positioned children */
+	position: relative;
 }
 
+/* Should be 'top' and 'bottom' instead? */
 #__rdly #__rdly_above_bar {
 	top: 0;
 	/* function */
 	z-index: 50;
 }
 
-#__rdly #__rdly_below_bar {
+#__rdly_below_bar {
 	top: 100%;
+	display: flex;
 }
 
 #__rdly #__rdly_bar {
-	width: 100%;
 	/* ??: Will this work if font-size is declared lower down? */
-	height: 2em;
-	/* For absolutely positioned children */
-	position: relative;
+	min-height: 2em;
 	text-align: center;
 }
 
@@ -105,12 +121,19 @@
 /* ============================== */
 /* SKIN */
 /* ============================== */
+#__rdly_iframe {
+	border: 0;
+}
+body {
+	margin: 0;
+}
+
 #__rdly div,
 #__rdly span,
 #__rdly a,
 #__rdly li {
 	/* font defaults from chrome inspection */
-	font-family: "droid", serif;
+	font-family: 'droid', serif;
 	font-size: 16px;
 	line-height: normal;
 	font-style: normal;
@@ -130,16 +153,17 @@
 	background-color: rgba(250, 250, 250, 1);
 }
 
+.__rdly-main-section {
+	border: 0;
+	border-bottom: 1px solid gray;
+}
+
 #__rdly #__rdly_bar,
 #__rdly #__rdly_bar div,
 #__rdly #__rdly_bar span,
 #__rdly #__rdly_bar a,
 #__rdly #__rdly_bar li {
 	font-size: 36px;
-}
-
-#__rdly #__rdly_bar {
-	border-bottom: 1px solid gray;
 }
 
 
@@ -196,4 +220,15 @@
 @keyframes spin {
 	100%
 	{ transform:rotate(360deg); }
+}
+
+#__rdly .__rdly-scrollable-y {
+	display: block;
+	overflow-y: scroll;
+	overflow-x: hidden;
+}
+
+#__rdly .__rdly-scrollable-y > * {
+	height: auto;
+	overflow: visible;
 }
