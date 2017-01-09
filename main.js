@@ -18,7 +18,9 @@
 
 	// ============== SETUP ============== \\
 	var unfluff 	= require('@knod/unfluff'),
-		detect 		= require('detect-lang'),
+		detect 		= require('detect-lang');
+
+	var Queue 		= require('./lib/Queue.js'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
 		Timer 		= require('./lib/ReaderlyTimer.js'),
 		Display 	= require('./lib/ReaderlyDisplay.js'),
