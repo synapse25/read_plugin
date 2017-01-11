@@ -23,9 +23,10 @@
                 "jquery.nouislider.js",
                 "lib/Fragment.js",
                 "lib/Queue.js",
-                "lib/ReaderlyTimer.js",
+                "lib/playback/Delayer.js",
+                "lib/playback/ReaderlyTimer.js",
                 "lib/ReaderlyDisplay.js",
-                "lib/playback/ReaderlyPlayback.js",
+                "lib/playback/PlaybackUI.js",
                 "lib/settings/ReaderlySettings.js",
                 "lib/settings/SpeedSettings.js",
 				"bundle.js"

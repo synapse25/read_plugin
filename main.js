@@ -22,21 +22,23 @@
 
 	var Queue 		= require('./lib/Queue.js'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
-		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Delayer 	= require('./lib/playback/Delayer.js')
+		Timer 		= require('./lib/playback/ReaderlyTimer.js'),
 		Display 	= require('./lib/ReaderlyDisplay.js'),
-		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Playback 	= require('./lib/playback/PlaybackUI.js'),
 		Settings 	= require('./lib/settings/ReaderlySettings.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
-	var queue, storage, timer, coreDisplay, playback, settings, speed;
+	var queue, storage, delayer, timer, coreDisplay, playback, settings, speed;
 
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new Timer( oldSettings, storage )
-		coreDisplay = new Display( timer ),
-		playback 	= new Playback( timer, coreDisplay ),
-		settings 	= new Settings( timer, coreDisplay ),
-		speed 		= new Speed( timer, settings );
+		delayer 	= new Delayer( oldSettings, storage );
+		timer 		= new Timer( delayer, oldSettings, storage );
+		coreDisplay = new Display( timer );
+		playback 	= new Playback( timer, queue, coreDisplay );
+		settings 	= new Settings( timer, coreDisplay );
+		speed 		= new Speed( delayer, settings );
 	};  // End afterLoadSettings()
 
 

@@ -195,6 +195,9 @@
 * the max-word length.
 * - ??: Add delay for paragraph?
 * - Reset values non-destructively
+* - Split queue into
+*   Words and...
+*   Word(s) Navigator/Trotter/Transporter/Traveler/Traverse/Walker/Explorer
 * 
 */
 
@@ -243,9 +246,11 @@
         qu.sentenceFragments = [];
         qu.fragments = [];
         qu.index     = -1;
+        qu.index2    = [ 0, -1 ];
         // Since data will be in arrays of sentences with words, this will
         // tell us which index corresponds to which sentence/word position
         qu.positions = [];
+        qu.position  = { sentence: 0, fragment: 0 };
         qu._progress = 0;
 
 
@@ -260,11 +265,10 @@
 
             var sFrags   = qu.sentenceFragments = [];  // Array of arrays of fragment objects (for now)
             qu.fragments = [];
-            qu.index     = 0;
+            qu.index     = -1;
+            qu.index2    = [ 0, -1 ];
             qu.positions = [];
 
-            // Have to do this backwards until we change old while loops
-            // for ( let senti = 0; senti < sentences.length; senti++ ) {
             for ( let senti = 0; senti < sentences.length; senti++ ) {
                 let sentence            = sentences[senti],
                     fragmentedWithPos   = qu._processSentence( sentence, senti );
@@ -362,32 +366,139 @@
 
 
         // ========= RUNTIME: TRAVELING THE QUEUE (for external use) ========= \\
-        qu.getFrag = function (index) {
-            var pos  = qu.positions[ index ]
+        qu.getFrag = function ( pos ) {
             var frag = qu.sentenceFragments[ pos.sentence ].fragments[ pos.fragment ];
             return frag;
         };
 
-        qu.next = function () {
-            var index = qu.index = Math.min( qu.index + 1, qu.positions.length - 1 );
-            return qu.getFrag(index);
+        qu.getIndex = function ( posToTest ) {
+            console.log('position:', posToTest, 'positions:', qu.positions)
+            var index = qu.positions.findIndex( function matchPositionToIndex( pos ) {
+                console.log( pos );
+                var sent = pos.sentence === posToTest.sentence,
+                    frag = pos.fragment === posToTest.fragment;
+                return sent && frag;
+            });
+            console.log(index)
+            return index;
         };
 
-        qu.prev = function () {
-            var index = qu.index = Math.max( qu.index - 1, 0 );
-            return qu.getFrag(index);
+        // qu.getSentence = function ( pos ) {
+        //     var sent = qu.sentenceFragments[ pos.sentence ];
+        //     return sent;
+        // };
+
+        // qu.getWord = function ( pos ) {
+        //     var frag = qu.sentenceFragments[ pos.sentence ].fragments[ pos.fragment ];
+        //     return frag;
+        // };
+
+        qu.next = qu.nextWord = function () {
+
+            // if ( qu.getProgress() >= 1 ) {
+            //     return qu.getFrag( qu.index );
+            // }
+
+            // var pos       = qu.position,
+            //     potential = { sentence: pos.sentence, fragment: pos.fragment },
+            //     sent      = qu.getSentence( potential );
+
+            // if ( pos.fragment >= sent.length ) {
+            //     potential.sentence += 1;
+            //     potential.fragment = 0;
+            //     sent = qu.getSentence( potential );
+            // }
+
+            // if ( sent ) {
+            //     qu.index += 1;
+            // }
+
+
+            // var incremented = { sentence: qu.position.sentence, word: qu.position.word + 1 }
+            // var potential = qu.getWord( incremented );
+            // if ( !potential ) {
+            //     incremented.sentence += 1;
+            //     incremented.word = 0;
+            //     potential;
+            // }
+            qu.index    = Math.min( qu.index + 1, qu.positions.length - 1 );
+            var pos     = qu.positions[ qu.index ];
+            qu.position = { sentence: pos.sentence, fragment: pos.fragment };
+            // console.log( qu.position, qu.index );
+            return qu.getFrag( qu.position );
         };
 
-        qu.current = function() {
+        qu.prev = qu.prevWord = function () {
+            qu.index    = Math.max( qu.index - 1, 0 );
+            var pos     = qu.positions[ qu.index ];
+            qu.position = { sentence: pos.sentence, fragment: pos.fragment };
+            return qu.getFrag( qu.position );
+        };
+
+        qu.current = qu.currentWord = function() {
             // Make sure nothing's off about the index
-            qu.index    = Math.max( qu.index, 0 );
-            var index   = qu.index = Math.min( qu.index, qu.positions.length - 1 );
-            return qu.getFrag(index);
+            var index   = Math.max( qu.index, 0 );
+            qu.index    = Math.min( index, qu.positions.length - 1 );
+            var pos     = qu.positions[ index ];
+            qu.position = { sentence: pos.sentence, fragment: pos.fragment };
+            return qu.getFrag( qu.position );
         };
+
+        qu.nextSentence = function () {
+            var pos     = qu.position,
+                senti   = pos.sentence + 1;
+
+            pos.sentence = Math.min( senti, (qu.sentenceFragments.length - 1) );
+            pos.fragment = 0;
+            qu.index     = qu.getIndex( pos );
+
+            // console.log( 'sentence:');//, pos, qu.index );
+
+            // // Possibly faster method to explore if optimization becomes an issue:
+            // // If there's no next sentence
+            // if ( senti >= qu.sentenceFragments.length ) {
+            //     // Go to the start of the last sentence
+            //     var diff = qu.position.fragment;
+            //     qu.position.fragment = 0;
+            //     qu.index -= diff;
+            //     // ?? Stay at the current word instead?
+            // } else {
+            //     qu.position.sentence += 1;
+            //     qu.position.fragment = 0;
+            //     qu.index = qu.getIndex( qu.position );
+            // }
+
+            return qu.getFrag( qu.position );
+        };  // End qu.nextSentence()
+
+        qu.prevSentence = function () {
+            var pos     = qu.position,
+                senti   = pos.sentence - 1;
+
+            pos.sentence = Math.max( senti, 0 );
+            pos.fragment = 0;
+            qu.index     = qu.getIndex( pos );
+
+            return qu.getFrag( qu.position );
+        };  // End qu.prevSentence()
+
+        qu.currentSentence = function () {
+            var pos     = qu.position,
+                senti   = pos.sentence;
+
+            senti = Math.min( senti, (qu.sentenceFragments.length - 1) );
+            senti = Math.max( senti, 0 );
+            pos.sentence = senti;
+            pos.fragment = 0;
+            qu.index     = qu.getIndex( pos );
+
+            return qu.getFrag( qu.position );
+        };  // End qu.currentSentence()
 
         qu.restart = function () {
             // Will be normalized by the next operation called (next, prev, current)
-            qu.index = -1;
+            qu.index    = -1;
+            qu.position = { sentence: 0, fragment: 0 };
             return qu;
         };
 
@@ -399,8 +510,10 @@
         // 'previous sentence'? 'next sentence'? 'section of document'? An index number?
             var type    = playbackObj.type,
                 amount  = playbackObj.amount;
-            if ( type === 'index' ) {
+            if ( type === 'index' || type === 'word' ) {
                 qu.index = amount;
+            } else if ( type === 'sentence' ) {
+
             }
             // TODO: (perhaps) qu[ type ] = amount;
             return qu;
@@ -418,7 +531,7 @@
     return Queue;
 }));
 
-},{"./Fragment.js":1,"sbd":150}],3:[function(require,module,exports){
+},{"./Fragment.js":1,"sbd":151}],3:[function(require,module,exports){
 /* ReaderlyDisplay.js
 * 
 * Just the Readerly text display, including areas for
@@ -575,7 +688,6 @@
 			// Also - shrink if needed, don't grow if it's short
 			if ( diff <= 0 ) { return rDis; }
 
-
 			var newHeight 			= height - diff;
 			scrollable.style.height = newHeight + 'px';
 
@@ -677,7 +789,7 @@
     return ReaderlyDisplay;
 }));
 
-},{"./core-CSS":6,"./settings/noui-CSS":11,"jquery":145}],4:[function(require,module,exports){
+},{"./core-CSS":5,"./settings/noui-CSS":12,"jquery":146}],4:[function(require,module,exports){
 /* ReaderlyStorage.js
 * 
 * Destructive, unfortunately - doesn't mutate settings,
@@ -764,411 +876,6 @@
     return ReaderlyStorage;
 }));
 },{}],5:[function(require,module,exports){
-/* ReaderlyTimer.js
-* 
-* Handles passing out the fragments from Queue in a manner
-* defined by its settings, which can change.
-* 
-* Based on https://github.com/jamestomasino/read_plugin/blob/master/Read.js
-* 
-* TODO;
-* - ??: Make length delay proportional to word length?
-* - Add extra paragraph pause back in
-* - Long word delay not working? How about otherPunc? And do more
-* 	symbols need to be included in that set of otherPunc?
-* - Implement more robust pausing (store in bool and wait for appropriate time)
-* - Scrubbing doesn't restart the slow-start value
-* 
-* NOTES:
-* - Always return Timer so functions can be chained
-* - Always send Timer as the first argument as events to
-* stay consistent.
-*/
-
-(function (root, timerFactory) {  // root is usually `window`
-    if (typeof define === 'function' && define.amd) {
-        // AMD. Register as an anonymous module.
-        define( ['jquery'], function ( jquery ) {
-        	return ( root.ReaderlyTimer = timerFactory( jquery ) );
-        });
-    } else if (typeof module === 'object' && module.exports) {
-        // Node. Does not work with strict CommonJS, but only CommonJS-like
-        // environments that support module.exports, like Node.
-        module.exports = timerFactory( require('jquery') );
-    } else {
-        // Browser globals
-        root.ReaderlyTimer = timerFactory( root.jQuery );
-    }
-}(this, function ( $ ) {
-
-	"use strict";
-
-	var ReaderlyTimer = function ( settings, storage ) {
-	/* ( {}, {} ) -> other {}
-	* 
-	*/
-		var rTim = {};
-
-		var _rSetts = null;
-		var defaultSettings = {
-			wpm: 500,
-			slowStartDelay: 5,
-			sentenceDelay: 2.5,
-			otherPuncDelay: 1.5,
-			shortWordDelay: 1.3,
-			longWordDelay: 1.4,
-			numericDelay: 2.0
-		};
-
-		var whiteSpace = /[\n\r\s]/;
-
-
-		rTim._setUp = function ( settings ) {
-
-			rTim.progress 				= 0;
-			rTim._currentWordFragment 	= null;
-
-			// Defaults
-			rTim.done 		 = false;
-			rTim.delay 		 = 0;
-			rTim._timer 	 = null;
-			rTim._isPlaying  = false;
-			rTim._wasPlaying = false;
-			rTim._goToEngaged 	= false;
-			rTim._isRestarting 	= false;
-			rTim._stepOperation = 'next';
-
-			// defaultSettings = settings || defaultSettings;
-
-			var wpm 			= settings.wpm 				|| defaultSettings.wpm,
-				slowStartDelay 	= settings.slowStartDelay 	|| defaultSettings.slowStartDelay,
-				sentenceDelay 	= settings.sentenceDelay 	|| defaultSettings.sentenceDelay,
-				otherPuncDelay 	= settings.otherPuncDelay 	|| defaultSettings.otherPuncDelay,
-				shortWordDelay 	= settings.shortWordDelay 	|| defaultSettings.shortWordDelay,
-				longWordDelay 	= settings.longWordDelay 	|| defaultSettings.longWordDelay,
-				numericDelay 	= settings.numericDelay 	|| defaultSettings.numericDelay;
-
-			// Update settings based on what's passed in
-			_rSetts = rTim._settings = {};
-			rTim.setwpm( wpm )
-				.setslowstartdelay( slowStartDelay )
-				.setsentencedelay( sentenceDelay )
-				.setotherpuncdelay( otherPuncDelay )
-				.setshortworddelay( shortWordDelay )
-				.setlongworddelay( longWordDelay )
-				.setnumericdelay( numericDelay );
-
-			return rTim;
-		};  // End rTim._setUp()
-
-
-		rTim.getProgress = function () {
-			rTim.progress = rTim._queue.getProgress();
-			return rTim.progress;
-		};  // End rTim.gesProsress()
-
-
-		rTim.getLength = function () {
-			return rTim._queue.fragments.length;
-		};  // End rTim.gesProsress()
-
-
-
-		// ============== FLOW CONTROL ============== \\
-		
-		rTim.start = function (queue) {
-			// Queue is passed in here, so that a Timer doesn't
-			// have to be destroyed every time something new is read
-
-			if (!queue) {
-				console.error( "No readable object was passed into ReaderlyTimer. `queue`:", rTim._queue );
-				return null;
-			}
-
-			$(rTim).trigger( 'starting', [rTim] );
-			rTim._queue 	= queue;
-			rTim.progress 	= queue.getProgress();
-
-			rTim.restart( true );
-			$(rTim).trigger( 'started', [rTim] );
-
-			return rTim;
-		};
-
-		rTim.restart = function ( noEvent ) {
-
-			if (!noEvent) $(rTim).trigger( 'restarting', [rTim] );
-			// rTim.pause();  // Do we need this?
-
-			rTim.done 			 = false;
-			rTim._tempStartDelay = _rSetts.slowStartDelay;
-
-			// Just put the index at the right place
-			rTim._queue.restart();
-			rTim.play();
-			if (!noEvent) $(rTim).trigger( 'restarted', [rTim] );
-
-			return rTim;
-		};
-
-		rTim.togglePlayPause = function () {
-			if (rTim._isPlaying) {
-				rTim.pause();
-			} else {
-				rTim.play();
-			}
-			return rTim;
-		};
-
-
-		// ??: 'playing' event should go off every time, but if we're
-		// restarting without pausing first (pausing would trigger visual
-		// feedback about pausing), then should the event not happen? That
-		// means the "play" image won't fire off on restarts, even though
-		// it feels like it should always fire on play.
-		rTim.play = function ( noEvent ) {
-			// "play" will always be forward. "rewind" can be play, but with "prev".
-			rTim._stepOperation = 'next';
-			// We get a playing event as long as playing is happening
-			// Hack or fix?
-			if (rTim._isPlaying) {
-				// There must be a better way to keep the "play"
-				// icon from appearing.
-				if (!noEvent) $(rTim).trigger( 'playing', [rTim] );
-				if (!noEvent) $(rTim).trigger( 'played', [rTim] );  // This second one too?
-				// ??: they should go as a pair, but nothing done in between.
-				// Maybe 'played' should be in the loop? Makes no sense.
-			}
-
-			// Make sure not to trigger multiple loops, increasing
-			// the speed every time.
-			if ( !rTim._isPlaying && !rTim.done ) {
-				if (!noEvent) $(rTim).trigger( 'playing', [rTim] );
-				rTim._isPlaying = true;
-				rTim._loop();
-				if (!noEvent) $(rTim).trigger( 'played', [rTim] );
-			} else if ( rTim.done ) {
-				rTim.restart();
-			}
-			return rTim;
-		};  // End rTim.play()
-
-
-		// TODO: Add generic function for pause, stop, and close
-
-
-		rTim.pause = function ( noEvent ) {
-			// noEvent can prevent pause from triggering (e.g. when
-			// called by `.stop()`). There must be a better way to
-			// avoid having the "pause" icon appear
-			if (!noEvent) $(rTim).trigger( 'pausing', [rTim] )
-
-			clearTimeout(rTim._timer);
-			rTim._isPlaying = false;
-			// Start slow when next go through loop (restore countdown)
-			// TODO: Start only half slowed down? delay/2?
-			// delay/(1/time elapsed max slowStartDelay)? (snap to 0 at some point)
-			rTim._tempStartDelay = _rSetts.slowStartDelay;
-
-			if (!noEvent) $(rTim).trigger( 'paused', [rTim] )
-			return rTim;
-		};
-
-
-		rTim.goTo = function ( playbackObj ) {
-		// Argument to pass in? 'previous sentence'? 'next sentence'?
-		// 'section of document'? An index number?
-		// ??: How to give useful feedback from this?
-			if ( rTim._queue ) {
-
-				if ( !rTim._goToEngaged ) {
-					rTim._wasPlaying = rTim._isPlaying;
-					rTim.pause( true );
-					rTim._goToEngaged = true;
-				}
-
-				rTim._queue.goTo( playbackObj );
-				rTim._stepOperation = 'current';
-				rTim.once();
-			}
-			return rTim;
-		};  // End rTim.goTo()
-
-		rTim.disengageGoTo = function () {
-			// // ??: Should this be always done in .play? Does "play" always mean go
-			// // forward? Doesn't it just mean "trigger loop"? ._loop() is "trigger
-			// // loop".
-			// rTim._stepOperation = 'next';
-			if ( rTim._wasPlaying ) { rTim.play( true ); }
-			rTim._goToEngaged = false;
-			return rTim;
-		};
-
-
-		rTim.stop = function () {
-		// Just another name for .pause() that people may want
-			$(rTim).trigger( 'stopping', [rTim] );
-			rTim.pause( true );  // Is this really legit?
-			$(rTim).trigger( 'stopped', [rTim] );
-			return rTim;
-		};
-
-		rTim.close = function () {
-		// Just another name for .pause() that people may want
-			$(rTim).trigger( 'closing', [rTim] );
-			rTim.pause( true );
-			$(rTim).trigger( 'closed', [rTim] );
-			return rTim;
-		};
-
-		rTim.calcDelay = function ( justOnce ) {
-			var delay = rTim.delay;
-
-			var frag  = rTim._currentWordFragment;  // Current word fragment
-			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
-			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
-			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
-			if ( frag.isLong() ) 	 delay *= _rSetts.longWordDelay;
-			if ( frag.isNumeric ) 	 delay *= _rSetts.numericDelay;
-
-			// Speeds up a big each time the loop is called
-			var extraDelay 		 = rTim._tempStartDelay;
-			// Make sure startDelay isn't used up by things like .once() called
-			// repeatedly, like with scrubber
-			if (!justOnce) {rTim._tempStartDelay = Math.max( 1, extraDelay / 1.5 );}
-			delay 				 = delay * rTim._tempStartDelay;
-
-			return delay;
-		};  // End rTim.calcDelay()
-
-		rTim._loop = function ( justOnce ) {
-
-			var progress = rTim.progress = rTim.getProgress();
-			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index] );
-
-			// Stop if we've reached the end
-			if ( progress === 1 ) {
-				$(rTim).trigger( 'done', [rTim] );
-				rTim.stop();
-				rTim.done = true;
-				return rTim;
-			}
-
-			$(rTim).trigger( 'loopStart', [rTim] );
-
-			// "next", "prev", or "current" word fragment
-			rTim._currentWordFragment 		= rTim._queue[ rTim._stepOperation ]();
-			var delay = rTim.calcDelay( justOnce );
-			if ( !justOnce ) { rTim._timer 	= setTimeout( rTim._loop, delay ); }
-
-			// Do it after setTimeout so that you can easily pause on "newWordFragment"
-			// Feels weird, though
-			$(rTim).trigger( 'newWordFragment', [rTim, rTim._currentWordFragment] );
-			$(rTim).trigger( 'loopEnd', [rTim] );
-
-			return rTim;  // Return timeout obj instead?
-		};  // End rTim._loop()
-
-
-		rTim.once = function () {
-			rTim._loop( true );
-			return rTim;
-		};
-
-
-
-		// ============== SET OPTIONS ============== \\
-		// Not needed, but might be nice to have:
-		rTim.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
-						'longWordDelay', 'numericDelay', 'slowStartDelay'];
-
-		// Event based settings changes
-		rTim.set = function (evnt, operation, value) {
-			// All these have lower-case versions - more consistency for event use?
-			var op = operation.toLowerCase();
-			if (op.indexOf('set') < 0) { op = 'set' + op; }
-
-			rTim[ op ]( value );
-			return rTim;
-		};  // End rTim.set()
-
-		$(rTim).on('set', rTim.set);
-
-
-		// atm, giving them two kinds of friendly names
-		rTim.setWPM = rTim.setwpm = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (5000, val);
-			_rSetts.wpm = val;
-			storage.set( { 'wpm': val } )
-			rTim.delay = 1/(val/60)*1000;  // What is this based on?
-			return rTim;
-		};
-
-		rTim.setSlowStartDelay = rTim.setslowstartdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max(0,val);
-			val = Math.min(10,val);
-			_rSetts.slowStartDelay = val;
-			storage.set( { 'slowStartDelay': val } )
-			return rTim;
-		};
-
-		rTim.setSentenceDelay = rTim.setsentencedelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.sentenceDelay = val;
-			storage.set( { 'sentenceDelay': val } )
-			return rTim;
-		};
-
-		rTim.setOtherPuncDelay = rTim.setotherpuncdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.otherPuncDelay = val;
-			storage.set( { 'otherPuncDelay': val } )
-			return rTim;
-		};
-
-		rTim.setShortWordDelay = rTim.setshortworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.shortWordDelay = val;
-			storage.set( { 'shortWordDelay': val } )
-			return rTim;
-		};
-
-		rTim.setLongWordDelay = rTim.setlongworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.longWordDelay = val;
-			storage.set( { 'longWordDelay': val } )
-			return rTim;
-		};
-
-		rTim.setNumericDelay = rTim.setnumericdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.numericDelay = val;
-			storage.set( { 'numericDelay': val } )
-			return rTim;
-		};
-
-        // ============== DO IT ============== \\
-		rTim._setUp( settings )
-		return rTim;
-	};  // End ReaderlyTimer() -> {}
-
-    return ReaderlyTimer;
-}));
-
-},{"jquery":145}],6:[function(require,module,exports){
 /* core-CSS.js
 * css that's bundleable
 * 
@@ -1429,8 +1136,215 @@ body {\
     return coreCSS;
 }));
 
+},{}],6:[function(require,module,exports){
+/* Delayer.js
+* 
+* Holding the changing user delay settinga and mananging
+* the calculation of the delay till the current word is
+* changed.
+*/
+
+(function (root, delayFactory) {  // root is usually `window`
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define( [], function () {
+        	return ( root.Delayer = delayFactory() );
+        });
+    } else if (typeof module === 'object' && module.exports) {
+        // Node. Does not work with strict CommonJS, but only CommonJS-like
+        // environments that support module.exports, like Node.
+        module.exports = delayFactory();
+    } else {
+        // Browser globals
+        root.Delayer = delayFactory();
+    }
+}(this, function () {
+
+	"use strict";
+
+	var Delayer = function ( settings, storage ) {
+	/* ( {}, {} ) -> Delay
+	* 
+	*/
+		var rDel = {};
+
+		var _rSetts = null;
+		var defaultSettings = {
+			wpm: 500,
+			slowStartDelay: 5,
+			sentenceDelay: 2.5,
+			otherPuncDelay: 1.5,
+			shortWordDelay: 1.3,
+			longWordDelay: 1.4,
+			numericDelay: 2.0
+		};
+
+
+		rDel._init = function ( settings ) {
+
+			var wpm 			= settings.wpm 				|| defaultSettings.wpm,
+				slowStartDelay 	= settings.slowStartDelay 	|| defaultSettings.slowStartDelay,
+				sentenceDelay 	= settings.sentenceDelay 	|| defaultSettings.sentenceDelay,
+				otherPuncDelay 	= settings.otherPuncDelay 	|| defaultSettings.otherPuncDelay,
+				shortWordDelay 	= settings.shortWordDelay 	|| defaultSettings.shortWordDelay,
+				longWordDelay 	= settings.longWordDelay 	|| defaultSettings.longWordDelay,
+				numericDelay 	= settings.numericDelay 	|| defaultSettings.numericDelay;
+
+			// Update settings based on what's passed in
+			_rSetts = rDel._settings = {};
+			rDel.set( 'wpm', 			wpm 			)
+				.set( 'slowstartdelay', slowStartDelay 	)
+				.set( 'sentencedelay', 	sentenceDelay 	)
+				.set( 'otherpuncdelay', otherPuncDelay 	)
+				.set( 'shortworddelay', shortWordDelay 	)
+				.set( 'longworddelay', 	longWordDelay 	)
+				.set( 'numericdelay', 	numericDelay 	);
+
+			return rDel;
+		};  // End rDel._init()
+
+
+
+		// ============== RUNTIME ============== \\
+
+		rDel.calcDelay = function ( frag, justOnce ) {
+			var delay = rDel.delay;
+console.log('1:', delay )
+			// var frag  = rDel._currentWordFragment;  // Current word fragment
+			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
+			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
+			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
+			if ( frag.isLong() ) 	 delay *= _rSetts.longWordDelay;
+			if ( frag.isNumeric ) 	 delay *= _rSetts.numericDelay;
+console.log('2:', delay, rDel._tempSlowStart )
+			// Speeds up a big each time the loop is called
+			var extraDelay = rDel._tempSlowStart;
+
+			// Make sure startDelay isn't used up by things like .once() called
+			// repeatedly, like with scrubber
+			if (!justOnce) {rDel._tempSlowStart = Math.max( 1, extraDelay / 1.5 );}
+			delay = delay * rDel._tempSlowStart;
+console.log('3:', delay )
+			return delay;
+		};  // End rDel.calcDelay()
+
+
+		rDel.resetSlowStart = function ( val ) {
+		/* (Num) -> Delayer
+		* 
+		* For after restart or pause, assign a value to start the
+		* text off slowly to warm the reader up to full speed.
+		*/
+			if ( val ) {
+				rDel._tempSlowStart = val;
+			} else {
+				rDel._tempSlowStart = _rSetts.slowStartDelay;
+			}
+
+			return rDel;
+		};
+
+
+
+		// ============== SET OPTIONS ============== \\
+
+		rDel._withinLimits = function ( val, min, max ) {
+			var minLimited = Math.max( min, val );
+			return Math.min( max, minLimited );
+		};
+
+		// Not needed, but might be nice to have:
+		rDel.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
+						'longWordDelay', 'numericDelay', 'slowStartDelay'];
+
+		// TODO: Just make this a function, no events?
+		// Event based settings changes
+		rDel.set = function ( operation, value) {
+			// If we just go off of lowercase, we can remove at
+			// least some typo mistakes and uncertainties
+			var op 	= '_set' + operation.toLowerCase();
+			var val = rDel[ op ]( value );
+			storage.set( { operation: val } );  // Should this be all lowercase too?
+			console.log('setting', op, 'to', val )
+			return rDel;
+		};  // End rDel.set()
+
+
+		// atm, giving them two kinds of friendly names
+		rDel._setwpm = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 5000 );
+			// val = Math.max (1, val);
+			// val = Math.min (5000, val);
+			_rSetts.wpm = val;
+			rDel.delay = 1/(val/60)*1000;  // What is this based on?
+			return val;
+		};
+
+		rDel._setslowstartdelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 0, 10 );
+			// val = Math.max(0,val);
+			// val = Math.min(10,val);
+			_rSetts.slowStartDelay = val;
+			return val;
+		};
+
+		rDel._setsentencedelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 10 );
+			// val = Math.max (1, val);
+			// val = Math.min (10, val);
+			_rSetts.sentenceDelay = val;
+			return val;
+		};
+
+		rDel._setotherpuncdelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 10 );
+			// val = Math.max (1, val);
+			// val = Math.min (10, val);
+			_rSetts.otherPuncDelay = val;
+			return val;
+		};
+
+		rDel._setshortworddelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 10 );
+			// val = Math.max (1, val);
+			// val = Math.min (10, val);
+			_rSetts.shortWordDelay = val;
+			return val;
+		};
+
+		rDel._setlongworddelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 10 );
+			// val = Math.max (1, val);
+			// val = Math.min (10, val);
+			_rSetts.longWordDelay = val;
+			return val;
+		};
+
+		rDel._setnumericdelay = function ( val ) {
+			val = parseFloat(val);
+			val = rDel._withinLimits( val, 1, 10 );
+			// val = Math.max (1, val);
+			// val = Math.min (10, val);
+			_rSetts.numericDelay = val;
+			return val;
+		};
+
+        // ============== DO IT ============== \\
+		rDel._init( settings )
+		return rDel;
+	};  // End Delay() -> {}
+
+    return Delayer;
+}));
+
 },{}],7:[function(require,module,exports){
-/* ReaderlyPlayback.js
+/* PlaybackUI.js
 * 
 * Pause, play, rewind, fast-forward, and scrub
 * controls. Includes progress bar. Name is not
@@ -1443,7 +1357,7 @@ body {\
     if (typeof define === 'function' && define.amd) {
         // AMD. Register as an anonymous module.
         define( ['jquery', 'nouislider', 'playback/playback-css'], function ( jquery, nouislider, playbackCSS ) {
-        	return ( root.ReaderlyPlayback = playbackFactory( jquery, nouislider, playbackCSS ) );
+        	return ( root.PlaybackUI = playbackFactory( jquery, nouislider, playbackCSS ) );
         });
     } else if (typeof module === 'object' && module.exports) {
         // Node. Does not work with strict CommonJS, but only CommonJS-like
@@ -1451,20 +1365,20 @@ body {\
         module.exports = playbackFactory( require('jquery'), require('nouislider'), require('./playback-CSS') );
     } else {
         // Browser globals
-        root.ReaderlyPlayback = playbackFactory( root.jQuery, root.noUiSlider, root.playbackCSS );  // not sure noUi is here
+        root.PlaybackUI = playbackFactory( root.jQuery, root.noUiSlider, root.playbackCSS );  // not sure noUi is here
     }
 }(this, function ( $, noUiSlider, playbackCSSstr ) {
 
 	"use strict";
 
-	var ReaderlyPlayback = function ( timer, coreDisplay ) {
+	var PlaybackUI = function ( timer, queue, coreDisplay ) {
 
-		var rPly = {};
+		var rPUI = {};
 
-		rPly.isPlaying 	 = false;
-		rPly.isScrubbing = false;
-		rPly.nodes 		 = {};
-		var nodes 		 = rPly.nodes;
+		rPUI.isPlaying 	 = false;
+		rPUI.isScrubbing = false;
+		rPUI.nodes 		 = {};
+		var nodes 		 = rPUI.nodes;
 
 		var progressNode, percentDone, scrubber;
 		var indicator, textButton, loading;
@@ -1503,131 +1417,136 @@ body {\
 
 		// =========== RUNTIME ACTIONS =========== \\
 
-		rPly.hideText = function () {
+		rPUI.hideText = function () {
 			$(textButton).addClass('__rdly-hidden');
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly.showText = function () {
+		rPUI.showText = function () {
 			$(textButton).removeClass('__rdly-hidden');
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly.wait = function () {
-			rPly.hideText();
+		rPUI.wait = function () {
+			rPUI.hideText();
 			$(loading).addClass('__rdly-rotating');
 			$(loading).removeClass('__rdly-hidden');
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly.stopWaiting = function () {
+		rPUI.stopWaiting = function () {
 			$(loading).addClass('__rdly-hidden');
 			$(loading).removeClass('__rdly-rotating');
-			rPly.showText();
-			return rPly;
+			rPUI.showText();
+			return rPUI;
 		};
 
 
-		rPly.clearText = function () {
+		rPUI.clearText = function () {
 			$(textButton).html("");
-			return rPly;
+			return rPUI;
 		};
 
 
 
 		// ----- DOM EVENTS ----- \\
-		rPly._play = function () {
+		rPUI._play = function () {
 			$(playFeedback).removeClass('__rdly-hidden');
 			$(pauseFeedback).addClass('__rdly-hidden');
 			// https://jsfiddle.net/aL7kxe78/3/ fadeOut (ends with display: none)
 			// http://stackoverflow.com/a/4549418/3791179 <- opacity
 			var x = $(playPauseFeedback).fadeTo(0, 0.7).fadeTo(700, 0)
-			return rPly;
+			return rPUI;
 		}
-		$(timer).on('playing', rPly._play);
 
-		rPly._pause = function () {
+		rPUI._pause = function () {
 			$(pauseFeedback).removeClass('__rdly-hidden');
 			$(playFeedback).addClass('__rdly-hidden');
 			$(playPauseFeedback).fadeTo(0, 0.7).fadeTo(700, 0)
-			return rPly;
+			return rPUI;
 		}
-		$(timer).on('paused', rPly._pause);
-		// $(timer).on('stopped', rPly._pause);  // Not sure pause should appear at the end
 
 
-		rPly._togglePlayPause = function () {
+		rPUI._togglePlayPause = function () {
 			timer.togglePlayPause();
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly._restart = function () {
+		rPUI._restart = function () {
 			timer.restart()
 		};
 
 
 		// ----- TIMER EVENTS ----- \\
 		var whiteSpaceRegexp = /[\n\r\s]/;
-		rPly._showNewFragment = function ( evnt, timer, fragment ) {
+		rPUI._showNewFragment = function ( evnt, timer, fragment ) {
 			// TOOD: Deal with line breaks in Queue instead
 			var chars = fragment.chars;
 			// Adds pauses for line breaks
 			if ( !whiteSpaceRegexp.test(chars) ) {
 				$(textButton).html( chars );
-				rPly.stopWaiting();
+				rPUI.stopWaiting();
 			}
 			// return chars;
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly._showProgress = function ( evnt, timer, fraction, indx ) {
-			if ( !rPly.isScrubbing ) {  // Don't mess timing up with transitions
+		rPUI._showProgress = function ( evnt, timer, fraction, indx ) {
+			if ( !rPUI.isScrubbing ) {  // Don't mess timing up with transitions
 				progressNode.noUiSlider.set( indx );  // version 8 nouislider
 			}
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly._start = function () {
+		rPUI._start = function () {
 			progressNode.noUiSlider.updateOptions({
 				range: { min: 0, max: timer.getLength() }
 			});
-			return rPly;
+			return rPUI;
 		}
-		$(timer).on( 'started', rPly._start );
 
 
 		// --------- SCRUBBER EVENTS --------- \\
-		rPly._startScrubbing = function ( values, handle ) {
-			rPly.isScrubbing = true;
-			return rPly;
-		};  // End rPly._startScrubbing()
+		rPUI._startScrubbing = function ( values, handle ) {
+			rPUI.isScrubbing = true;
+			return rPUI;
+		};  // End rPUI._startScrubbing()
 
 
-		rPly._updateScrubbedWords = function ( values, handle ) {
+		rPUI._updateScrubbedWords = function ( values, handle ) {
 			timer.goTo({
 				type: 'index',
 				amount: parseInt(values[handle])
 			});
-			return rPly;
+			return rPUI;
 		};
 
 
-		rPly._stopScrubbing = function ( values, handle ) {
-			rPly.isScrubbing = false;
+		rPUI._stopScrubbing = function ( values, handle ) {
+			rPUI.isScrubbing = false;
 			timer.disengageGoTo();
-			return rPly;
-		};  // End rPly._stopScrubbing()
+			return rPUI;
+		};  // End rPUI._stopScrubbing()
+
+
+		rPUI.keyInput = function ( evnt ) {
+			if ( evnt.keyCode === 39 ) {
+				timer.pause();
+				queue.nextSentence();
+				setTimeout( timer.play, 200 );
+			}
+		};
 
 
 		// =========== INITIALIZE =========== \\
 
-		rPly._progressSlider = function ( progNode ) {
+		rPUI._progressSlider = function ( progNode ) {
 		/* ( DOM Node ) -> same DOM Node
 		* 
 		* Turn the given data into one noUiSlider slider
@@ -1645,31 +1564,40 @@ body {\
 			});
 
 			return progNode;
-		};  // End rPly._progressSlider()
+		};  // End rPUI._progressSlider()
 
 
-		rPly._addEvents = function () {
+		rPUI._addEvents = function () {
 			// Timer events
-			$(timer).on( 'newWordFragment', rPly._showNewFragment );
-			$(timer).on( 'progress', rPly._showProgress );
+			$(timer).on('playBegin', rPUI._play);
+			$(timer).on('pauseFinish', rPUI._pause);
+			// $(timer).on('stopFinish', rPUI._pause);  // Not sure pause should appear at the end
+			$(timer).on( 'startFinish', rPUI._start );
+			$(timer).on( 'newWordFragment', rPUI._showNewFragment );
+			$(timer).on( 'progress', rPUI._showProgress );
 
 			// Scrubber events
-			progressNode.noUiSlider.on( 'start', rPly._startScrubbing );
-			progressNode.noUiSlider.on( 'slide', rPly._updateScrubbedWords );
-			progressNode.noUiSlider.on( 'change', rPly._stopScrubbing );
+			progressNode.noUiSlider.on( 'start', rPUI._startScrubbing );
+			progressNode.noUiSlider.on( 'slide', rPUI._updateScrubbedWords );
+			progressNode.noUiSlider.on( 'change', rPUI._stopScrubbing );
 
 			// DOM events
-			$(textButton).on( 'touchend click', rPly._togglePlayPause );
-			$(restart).on( 'touchend click', rPly._restart );
+			$(textButton).on( 'touchend click', rPUI._togglePlayPause );
+			$(restart).on( 'touchend click', rPUI._restart );
 
-			return rPly;
+			// Keyboard input
+			// Arrow keys only listen to the keydown event
+			$(document.body).on( 'keydown', rPUI.keyInput );
+			$(coreDisplay.nodes.doc).on( 'keydown', rPUI.keyInput );
+
+			return rPUI;
 		};
 
 
-		rPly._init = function ( coreDisplay ) {
+		rPUI._init = function ( coreDisplay ) {
 
 			progressNode = nodes.progressNode = $(progStr)[0];
-			rPly._progressSlider( progressNode );
+			rPUI._progressSlider( progressNode );
 
 			indicator = nodes.indicator = $(indicatorStr)[0];
 			// ??: Should this really be a button? How do the rest of the controls fit into this?
@@ -1703,24 +1631,443 @@ body {\
 			$css.appendTo( coreNodes.head );
 
 
-			rPly._addEvents();
+			rPUI._addEvents();
 
-			return rPly;
+			return rPUI;
 		};
 
 
 		// =========== ADD NODE, ETC. =========== \\
 		// Don't show at start, only when prompted
-		rPly._init( coreDisplay );
+		rPUI._init( coreDisplay );
 
 		// To be called in a script
-		return rPly;
-	};  // End ReaderlyPlayback() -> {}
+		return rPUI;
+	};  // End PlaybackUI() -> {}
 
 	// To put on the window object, or export into a module
-    return ReaderlyPlayback;
+    return PlaybackUI;
 }));
-},{"./playback-CSS":8,"jquery":145,"nouislider":146}],8:[function(require,module,exports){
+
+},{"./playback-CSS":9,"jquery":146,"nouislider":147}],8:[function(require,module,exports){
+/* ReaderlyTimer.js
+* 
+* Handles passing out the fragments from Queue in a manner
+* defined by its settings, which can change.
+* 
+* Based on https://github.com/jamestomasino/read_plugin/blob/master/Read.js
+* 
+* TODO;
+* - ??: Make length delay proportional to word length?
+* - Add extra paragraph pause back in
+* - Long word delay not working? How about otherPunc? And do more
+* 	symbols need to be included in that set of otherPunc?
+* - Implement more robust pausing (store in bool and wait for appropriate time)
+* - Scrubbing doesn't restart the slow-start value
+* 
+* NOTES:
+* - Always return Timer so functions can be chained
+* - Always send Timer as the first argument as events to
+* stay consistent.
+*/
+
+(function (root, timerFactory) {  // root is usually `window`
+    if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define( ['jquery'], function ( jquery ) {
+        	return ( root.ReaderlyTimer = timerFactory( jquery ) );
+        });
+    } else if (typeof module === 'object' && module.exports) {
+        // Node. Does not work with strict CommonJS, but only CommonJS-like
+        // environments that support module.exports, like Node.
+        module.exports = timerFactory( require('jquery') );
+    } else {
+        // Browser globals
+        root.ReaderlyTimer = timerFactory( root.jQuery );
+    }
+}(this, function ( $ ) {
+
+	"use strict";
+
+	var ReaderlyTimer = function ( delayer, settings, storage ) {
+	/* ( {}, {} ) -> other {}
+	* 
+	*/
+		var rTim = {};
+
+		var _rSetts = null;
+		var defaultSettings = {
+			wpm: 500,
+			slowStartDelay: 5,
+			sentenceDelay: 2.5,
+			otherPuncDelay: 1.5,
+			shortWordDelay: 1.3,
+			longWordDelay: 1.4,
+			numericDelay: 2.0
+		};
+
+
+		rTim._setUp = function ( settings ) {
+
+			rTim.progress 				= 0;
+			rTim._currentWordFragment 	= null;
+
+			// Defaults
+			rTim.done 		 = false;
+			rTim.delay 		 = 0;
+
+			rTim._timeout 	 = null;
+			rTim._isPlaying  = false;
+			rTim._wasPlaying = false;
+			rTim._goToEngaged 	 = false;
+			rTim._stepOperation  = 'next';
+			rTim._tempStartDelay = 0;
+
+
+			// defaultSettings = settings || defaultSettings;
+
+			var wpm 			= settings.wpm 				|| defaultSettings.wpm,
+				slowStartDelay 	= settings.slowStartDelay 	|| defaultSettings.slowStartDelay,
+				sentenceDelay 	= settings.sentenceDelay 	|| defaultSettings.sentenceDelay,
+				otherPuncDelay 	= settings.otherPuncDelay 	|| defaultSettings.otherPuncDelay,
+				shortWordDelay 	= settings.shortWordDelay 	|| defaultSettings.shortWordDelay,
+				longWordDelay 	= settings.longWordDelay 	|| defaultSettings.longWordDelay,
+				numericDelay 	= settings.numericDelay 	|| defaultSettings.numericDelay;
+
+			// Update settings based on what's passed in
+			_rSetts = rTim._settings = {};
+			rTim.setwpm( wpm )
+				.setslowstartdelay( slowStartDelay )
+				.setsentencedelay( sentenceDelay )
+				.setotherpuncdelay( otherPuncDelay )
+				.setshortworddelay( shortWordDelay )
+				.setlongworddelay( longWordDelay )
+				.setnumericdelay( numericDelay );
+
+			return rTim;
+		};  // End rTim._setUp()
+
+
+		rTim.getProgress = function () {
+			rTim.progress = rTim._queue.getProgress();
+			return rTim.progress;
+		};  // End rTim.gesProsress()
+
+
+		rTim.getLength = function () {
+			return rTim._queue.fragments.length;
+		};  // End rTim.gesProsress()
+
+
+
+		// ============== FLOW CONTROL ============== \\
+
+		rTim._noDelayMod = function ( startDelay ) { return startDelay; };
+		
+		rTim.start = function ( queue ) {
+			// Queue is passed in here, so that a Timer doesn't
+			// have to be destroyed every time something new is read
+
+			if (!queue) {
+				console.error( "No readable object was passed into PlaybackManager. `queue`:", rTim._queue );
+			} else {
+
+				$(rTim).trigger( 'startBegin', [rTim] );
+
+				rTim._queue = queue;
+				rTim._restart( null, null, null );
+
+				$(rTim).trigger( 'startFinish', [rTim] );
+			}  // end if no data passed in
+
+			return rTim;
+		};  // End rTim.start()
+
+		rTim.restart = function ( noEvent ) {
+			rTim._restart( 'restartBegin', 'restartFinish', null );
+			return rTim;
+		};
+
+
+		rTim._restart = function ( startEventName, endEventName, startDelayModFunc ) {
+
+			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
+			// rTim.pause();  // Do we need this?
+
+			rTim.done = false;
+
+			// Start slow when next go through loop (restore countdown)
+			var delayMod = startDelayModFunc || rTim._noDelayMod;
+			// rTim._tempStartDelay = delayMod( _rSetts.slowStartDelay );
+			var delay 	 = delayMod( delayer._settings.slowStartDelay );
+			delayer.resetSlowStart( delay );
+
+			// Just put the index at the right place
+			rTim._queue.restart();
+			rTim.play();
+
+			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
+
+			return rTim;
+		};  // End rTim._restart()
+
+
+		// ??: 'playing' event should go off every time, but if we're
+		// restarting without pausing first (pausing would trigger visual
+		// feedback about pausing), then should the event not happen? That
+		// means the "play" image won't fire off on restarts, even though
+		// it feels like it should always fire on play.
+		rTim._play = function ( startEventName, endEventName ) {
+		/* ( Str, Str ) -> PlaybackManager
+		* 
+		* For all 'play'-like activities
+		* ??: Just one eventName which gets + 'Begin' and + 'Finish' where appropriate?
+		*/
+			// "play" will always be forward. "rewind" can be play, but with "prev".
+			rTim._stepOperation = 'next';
+
+			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
+			
+			if ( !rTim._isPlaying ) {
+				rTim._isPlaying = true;
+				rTim._loop();
+			}
+
+			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
+
+			return rTim;
+		};  // End rTim._play()
+
+		// TODO: Add generic function for pause, stop, and close
+		rTim._pause = function ( startEventName, endEventName, startDelayModFunc ) {
+		/* ( Str, Str, Func ) -> PlaybackManager
+		* 
+		* For all 'pause'-like activities
+		*/ 
+			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
+
+			clearTimeout(rTim._timeout);
+			rTim._isPlaying = false;
+
+			// Start slow when next go through loop (restore countdown)
+			var delayMod = startDelayModFunc || rTim._noDelayMod;
+			// rTim._tempStartDelay = delayMod( _rSetts.slowStartDelay );
+			var delay 	 = delayMod( delayer._settings.slowStartDelay );
+			delayer.resetSlowStart( delay );
+
+			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
+		};  // End rTim._pause()
+
+
+
+		rTim.play = function () {
+			if ( rTim.done ) { rTim.restart(); }
+			else { rTim._play( 'playBegin', 'playFinish' ); }
+
+			return rTim;
+		};  // End rTim.play()
+
+
+		rTim.pause = function () {
+			rTim._pause( 'pauseBegin', 'pauseFinish', null );
+			return rTim;
+		};  // End rTim.pause()
+		rTim.stop = function () {
+		// Just another name for .pause() that people may want
+			rTim._pause( 'stopBegin', 'stopFinish', null );
+			return rTim;
+		};
+		rTim.close = function () {
+		// Just another name for .pause() that people may want
+			rTim.pause( 'closeBegin', 'closeFinish', null );
+			return rTim;
+		};
+
+
+		rTim.togglePlayPause = function () {
+			if (rTim._isPlaying) { rTim.pause(); }
+			else { rTim.play(); }
+			return rTim;
+		};
+
+
+		// TODO: If done and goTo < length, done = false
+		rTim.goTo = function ( playbackObj ) {
+		// Argument to pass in? 'previous sentence'? 'next sentence'?
+		// 'section of document'? An index number?
+		// ??: How to give useful feedback from this?
+			if ( rTim._queue ) {
+
+				if ( !rTim._goToEngaged ) {
+					rTim._wasPlaying = rTim._isPlaying;
+					rTim._pause( null, null, null );
+					rTim._goToEngaged = true;
+				}
+
+				rTim._queue.goTo( playbackObj );
+				rTim._stepOperation = 'current';
+				rTim.once();
+			}
+			return rTim;
+		};  // End rTim.goTo()
+
+		rTim.disengageGoTo = function () {
+			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
+			rTim._goToEngaged = false;
+			return rTim;
+		};
+
+
+		rTim.calcDelay = function ( frag, justOnce ) {
+			var delay = rTim.delay;
+
+			// var frag  = rTim._currentWordFragment;  // Current word fragment
+			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
+			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
+			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
+			if ( frag.isLong() ) 	 delay *= _rSetts.longWordDelay;
+			if ( frag.isNumeric ) 	 delay *= _rSetts.numericDelay;
+
+			// Speeds up a big each time the loop is called
+			var extraDelay 		 = rTim._tempStartDelay;
+
+			// Make sure startDelay isn't used up by things like .once() called
+			// repeatedly, like with scrubber
+			if (!justOnce) {rTim._tempStartDelay = Math.max( 1, extraDelay / 1.5 );}
+			delay = delay * rTim._tempStartDelay;
+
+			return delay;
+		};  // End rTim.calcDelay()
+
+		rTim._loop = function ( justOnce ) {
+
+			var progress = rTim.progress = rTim.getProgress();
+			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index] );
+
+			// Stop if we've reached the end
+			if ( progress === 1 ) {
+				$(rTim).trigger( 'done', [rTim] );
+				rTim.stop();
+				rTim.done = true;
+				return rTim;
+			}
+
+			$(rTim).trigger( 'loopBegin', [rTim] );
+
+			// "next", "prev", or "current" word fragment
+			rTim._currentWordFragment = rTim._queue[ rTim._stepOperation ]();
+			var delay = delayer.calcDelay( rTim._currentWordFragment, justOnce );
+			if ( !justOnce ) { rTim._timeout = setTimeout( rTim._loop, delay ); }
+
+			// Do it after setTimeout so that you can easily pause on "newWordFragment"
+			// Feels weird, though
+			$(rTim).trigger( 'newWordFragment', [rTim, rTim._currentWordFragment] );
+			$(rTim).trigger( 'loopFinish', [rTim] );
+
+			return rTim;  // Return timeout obj instead?
+		};  // End rTim._loop()
+
+
+		rTim.once = function () {
+			rTim._loop( true );
+			return rTim;
+		};
+
+
+
+		// ============== SET OPTIONS ============== \\
+		// Not needed, but might be nice to have:
+		rTim.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
+						'longWordDelay', 'numericDelay', 'slowStartDelay'];
+
+		// TODO: Just make this a function, no events?
+		// Event based settings changes
+		rTim.set = function (evnt, operation, value) {
+			// All these have lower-case versions - more consistency for event use?
+			var op = operation.toLowerCase();
+			if (op.indexOf('set') < 0) { op = 'set' + op; }
+
+			rTim[ op ]( value );
+			return rTim;
+		};  // End rTim.set()
+
+		$(rTim).on('set', rTim.set);
+
+
+		// atm, giving them two kinds of friendly names
+		rTim.setWPM = rTim.setwpm = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (5000, val);
+			_rSetts.wpm = val;
+			storage.set( { 'wpm': val } )
+			rTim.delay = 1/(val/60)*1000;  // What is this based on?
+			return rTim;
+		};
+
+		rTim.setSlowStartDelay = rTim.setslowstartdelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max(0,val);
+			val = Math.min(10,val);
+			_rSetts.slowStartDelay = val;
+			storage.set( { 'slowStartDelay': val } )
+			return rTim;
+		};
+
+		rTim.setSentenceDelay = rTim.setsentencedelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (10, val);
+			_rSetts.sentenceDelay = val;
+			storage.set( { 'sentenceDelay': val } )
+			return rTim;
+		};
+
+		rTim.setOtherPuncDelay = rTim.setotherpuncdelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (10, val);
+			_rSetts.otherPuncDelay = val;
+			storage.set( { 'otherPuncDelay': val } )
+			return rTim;
+		};
+
+		rTim.setShortWordDelay = rTim.setshortworddelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (10, val);
+			_rSetts.shortWordDelay = val;
+			storage.set( { 'shortWordDelay': val } )
+			return rTim;
+		};
+
+		rTim.setLongWordDelay = rTim.setlongworddelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (10, val);
+			_rSetts.longWordDelay = val;
+			storage.set( { 'longWordDelay': val } )
+			return rTim;
+		};
+
+		rTim.setNumericDelay = rTim.setnumericdelay = function ( val ) {
+			val = parseFloat(val);
+			val = Math.max (1, val);
+			val = Math.min (10, val);
+			_rSetts.numericDelay = val;
+			storage.set( { 'numericDelay': val } )
+			return rTim;
+		};
+
+        // ============== DO IT ============== \\
+		rTim._setUp( settings )
+		return rTim;
+	};  // End ReaderlyTimer() -> {}
+
+    return ReaderlyTimer;
+}));
+
+},{"jquery":146}],9:[function(require,module,exports){
 // playback-CSS.js
 // css that's bundleable
 
@@ -1914,7 +2261,7 @@ body {\
     return playbackCSS;
 }));
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /* ReaderlySettings.js
 * 
 * Should manage settings. Don't put them directly in here
@@ -2169,7 +2516,7 @@ body {\
     return ReaderlySettings;
 }));
 
-},{"./settings-CSS":12,"jquery":145}],10:[function(require,module,exports){
+},{"./settings-CSS":13,"jquery":146}],11:[function(require,module,exports){
 /* SpeedSettings.js
 * 
 * UI elements for setting various speeds/delays for
@@ -2197,7 +2544,7 @@ body {\
 
 	"use strict";
 
-	var SpeedSettings = function ( timer, settingsManager ) {
+	var SpeedSettings = function ( delayer, coreSettings ) {
 
 		var rSpd = {};
 
@@ -2248,12 +2595,12 @@ body {\
 
 			data.sliderNode.noUiSlider.on('update', function( values, handle ) {
 				data.inputNode.value = values[handle];
-				data.setFunc( values[handle] );
+				delayer.set( data.operation, values[handle] );
 			});
 
 			data.inputNode.addEventListener('change', function(){
 				data.sliderNode.noUiSlider.set(this.value);
-				data.setFunc( this.value );
+				delayer.set( data.operation, this.value );
 			});
 
 			return data.sliderNode;
@@ -2264,7 +2611,7 @@ body {\
 
 			var slider 	= rSpd._oneSlider,
 				nodes 	= rSpd._nodes,
-				setts 	= timer._settings;
+				setts 	= delayer._settings;
 
 			slider({
 				sliderNode: 	nodes.wpmSlider,
@@ -2274,7 +2621,7 @@ body {\
 				step: 		25,
 				inputNode: 	nodes.wpmInput,
 				resolution: 1,
-				setFunc: 	timer.setWPM
+				operation: 	'WPM'
 			});
 
 			slider({
@@ -2284,7 +2631,7 @@ body {\
 				step: 		1,
 				inputNode: 	nodes.slowStartInput,
 				resolution: 1,
-				setFunc: 	timer.setSlowStartDelay
+				operation: 	'slowStartDelay'
 			});
 
 			slider({
@@ -2294,7 +2641,7 @@ body {\
 				step: 		0.1,
 				inputNode: 	nodes.sentenceDelayInput,
 				resolution: 0.1,
-				setFunc: 	timer.setSentenceDelay
+				operation: 	'sentenceDelay'
 			});
 
 			slider({
@@ -2304,7 +2651,7 @@ body {\
 				step: 		0.1,
 				inputNode: 	nodes.puncDelayInput,
 				resolution: 0.1,
-				setFunc: 	timer.setOtherPuncDelay
+				operation: 	'otherPuncDelay'
 			});
 
 			slider({
@@ -2314,7 +2661,7 @@ body {\
 				step: 		0.1,
 				inputNode: 	nodes.shortWordDelayInput,
 				resolution: 0.1,
-				setFunc: 	timer.setShortWordDelay
+				operation: 	'shortWordDelay'
 			});
 
 			slider({
@@ -2324,7 +2671,7 @@ body {\
 				step: 		0.1,
 				inputNode: 	nodes.longWordDelayInput,
 				resolution: 0.1,
-				setFunc: 	timer.setLongWordDelay
+				operation: 	'longWordDelay'
 			});
 
 			slider({
@@ -2334,7 +2681,7 @@ body {\
 				step: 		0.1,
 				inputNode: 	nodes.numericDelayInput,
 				resolution: 0.1,
-				setFunc: 	timer.setNumericDelay
+				operation: 	'numericDelay'
 			});
 
 			return rSpd;
@@ -2375,7 +2722,7 @@ body {\
 					</div>')
 		};  // End rSpd._oneSetting()
 
-		rSpd._addNodes = function ( settingsManager ) {
+		rSpd._addNodes = function ( coreSettings ) {
 
 			var one = rSpd._oneSetting;
 
@@ -2383,7 +2730,7 @@ body {\
 			var $menu = $('<div id="__rdly_speed_settings_menu"></div>');
 			rSpd.node = $menu[0];
 
-			settingsManager.addMenu( rSpd );
+			coreSettings.addMenu( rSpd );
 
 			rSpd._nodes.menu = $menu[0];
 
@@ -2399,9 +2746,9 @@ body {\
 		};  // End rSpd._addNodes()
 
 
-		rSpd._init = function ( settingsManager ) {
+		rSpd._init = function ( coreSettings ) {
 
-			rSpd._addNodes( settingsManager );
+			rSpd._addNodes( coreSettings );
 			rSpd._assignSettingItems();
 			rSpd._makeSliders();
 
@@ -2414,7 +2761,7 @@ body {\
 
 		// =========== ADD NODE, ETC. =========== \\
 		// Don't show at start, only when prompted
-		rSpd._init( settingsManager );
+		rSpd._init( coreSettings );
 
 		// To be called in a script
 		return rSpd;
@@ -2424,7 +2771,7 @@ body {\
     return SpeedSettings;
 }));
 
-},{"jquery":145,"nouislider":146}],11:[function(require,module,exports){
+},{"jquery":146,"nouislider":147}],12:[function(require,module,exports){
 // noui-CSS.js
 // css that's bundleable
 
@@ -2668,7 +3015,7 @@ body {\
     return nouiCSS;
 }));
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 // settings-CSS.js
 // css that's bundleable
 
@@ -2873,7 +3220,7 @@ body {\
     return settingsCSS;
 }));
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 /* main.js
 * 
 * TODO:
@@ -2898,21 +3245,23 @@ body {\
 
 	var Queue 		= require('./lib/Queue.js'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
-		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Delayer 	= require('./lib/playback/Delayer.js')
+		Timer 		= require('./lib/playback/ReaderlyTimer.js'),
 		Display 	= require('./lib/ReaderlyDisplay.js'),
-		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Playback 	= require('./lib/playback/PlaybackUI.js'),
 		Settings 	= require('./lib/settings/ReaderlySettings.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
-	var queue, storage, timer, coreDisplay, playback, settings, speed;
+	var queue, storage, delayer, timer, coreDisplay, playback, settings, speed;
 
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new Timer( oldSettings, storage )
-		coreDisplay = new Display( timer ),
-		playback 	= new Playback( timer, coreDisplay ),
-		settings 	= new Settings( timer, coreDisplay ),
-		speed 		= new Speed( timer, settings );
+		delayer 	= new Delayer( oldSettings, storage );
+		timer 		= new Timer( delayer, oldSettings, storage );
+		coreDisplay = new Display( timer );
+		playback 	= new Playback( timer, queue, coreDisplay );
+		settings 	= new Settings( timer, coreDisplay );
+		speed 		= new Speed( delayer, settings );
 	};  // End afterLoadSettings()
 
 
@@ -3002,7 +3351,7 @@ body {\
 
 })();
 
-},{"./lib/Queue.js":2,"./lib/ReaderlyDisplay.js":3,"./lib/ReaderlyStorage.js":4,"./lib/ReaderlyTimer.js":5,"./lib/playback/ReaderlyPlayback.js":7,"./lib/settings/ReaderlySettings.js":9,"./lib/settings/SpeedSettings.js":10,"@knod/unfluff":19,"detect-lang":93}],14:[function(require,module,exports){
+},{"./lib/Queue.js":2,"./lib/ReaderlyDisplay.js":3,"./lib/ReaderlyStorage.js":4,"./lib/playback/Delayer.js":6,"./lib/playback/PlaybackUI.js":7,"./lib/playback/ReaderlyTimer.js":8,"./lib/settings/ReaderlySettings.js":10,"./lib/settings/SpeedSettings.js":11,"@knod/unfluff":20,"detect-lang":94}],15:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 void function () {
   var _, cleanArticleTags, cleanBadTags, cleanCodeBlocks, cleanEmTags, cleaner, cleanErrantLinebreaks, cleanParaSpans, cleanUnderlines, divToPara, getReplacementNodes, removeBodyClasses, removeDropCaps, removeNodesRegex, removeScriptsStyles, replaceWithPara;
@@ -3213,7 +3562,7 @@ void function () {
   };
 }.call(this);
 
-},{"lodash":91}],15:[function(require,module,exports){
+},{"lodash":92}],16:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 void function () {
   var _, addSiblings, biggestTitleChunk, cleanText, cleanTitle, formatter, getObjectTag, getScore, getSiblingsContent, getSiblingsScore, getVideoAttrs, isBoostable, isHighlinkDensity, isNodescoreThresholdMet, isTableAndNoParaExist, postCleanup, rawTitle, stopwords, updateNodeCount, updateScore;
@@ -3722,7 +4071,7 @@ void function () {
   };
 }.call(this);
 
-},{"./formatter":16,"./stopwords":17,"lodash":91}],16:[function(require,module,exports){
+},{"./formatter":17,"./stopwords":18,"lodash":92}],17:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 void function () {
   var _, addNewlineToBr, cleanParagraphText, convertToText, formatter, linksToText, removeFewwordsParagraphs, removeNegativescoresNodes, replaceWithText, stopwords, ulToText, XRegExp;
@@ -3845,7 +4194,7 @@ void function () {
   };
 }.call(this);
 
-},{"./stopwords":17,"lodash":91,"xregexp":92}],17:[function(require,module,exports){
+},{"./stopwords":18,"lodash":92,"xregexp":93}],18:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 void function () {
   var _, cache, candiateWords, removePunctuation, stopwords, stopwordsData;
@@ -3889,7 +4238,7 @@ void function () {
   };
 }.call(this);
 
-},{"./stopwordsdata":18,"lodash":91}],18:[function(require,module,exports){
+},{"./stopwordsdata":19,"lodash":92}],19:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 module.exports = {
   ar: [
@@ -12247,7 +12596,7 @@ module.exports = {
   ]
 };
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 // Generated by CoffeeScript 2.0.0-beta7
 void function () {
   var cheerio, cleaner, extractor, getCleanedDoc, getParsedDoc, getTopNode, unfluff;
@@ -12389,7 +12738,7 @@ void function () {
   };
 }.call(this);
 
-},{"./cleaner":14,"./extractor":15,"cheerio":20}],20:[function(require,module,exports){
+},{"./cleaner":15,"./extractor":16,"cheerio":21}],21:[function(require,module,exports){
 /**
  * Export cheerio (with )
  */
@@ -12402,7 +12751,7 @@ exports = module.exports = require('./lib/cheerio');
 
 exports.version = require('./package').version;
 
-},{"./lib/cheerio":25,"./package":90}],21:[function(require,module,exports){
+},{"./lib/cheerio":26,"./package":91}],22:[function(require,module,exports){
 var _ = require('lodash'),
   utils = require('../utils'),
   isTag = utils.isTag,
@@ -12817,7 +13166,7 @@ var is = exports.is = function (selector) {
 };
 
 
-},{"../utils":28,"lodash":91}],22:[function(require,module,exports){
+},{"../utils":29,"lodash":92}],23:[function(require,module,exports){
 var _ = require('lodash'),
     domEach = require('../utils').domEach;
 var toString = Object.prototype.toString;
@@ -12937,7 +13286,7 @@ function parse(styles) {
     }, {});
 }
 
-},{"../utils":28,"lodash":91}],23:[function(require,module,exports){
+},{"../utils":29,"lodash":92}],24:[function(require,module,exports){
 var _ = require('lodash'),
     parse = require('../parse'),
     $ = require('../static'),
@@ -13243,7 +13592,7 @@ var clone = exports.clone = function() {
   return this._make($.html(this));
 };
 
-},{"../parse":26,"../static":27,"../utils":28,"lodash":91}],24:[function(require,module,exports){
+},{"../parse":27,"../static":28,"../utils":29,"lodash":92}],25:[function(require,module,exports){
 var _ = require('lodash'),
     select = require('CSSselect'),
     utils = require('../utils'),
@@ -13606,7 +13955,7 @@ var add = exports.add = function(other, context) {
   return selection;
 };
 
-},{"../utils":28,"CSSselect":29,"htmlparser2":63,"lodash":91}],25:[function(require,module,exports){
+},{"../utils":29,"CSSselect":30,"htmlparser2":64,"lodash":92}],26:[function(require,module,exports){
 /*
   Module dependencies
 */
@@ -13769,7 +14118,7 @@ var isNode = function(obj) {
   return obj.name || obj.type === 'text' || obj.type === 'comment';
 };
 
-},{"./api/attributes":21,"./api/css":22,"./api/manipulation":23,"./api/traversing":24,"./parse":26,"./static":27,"lodash":91,"path":160}],26:[function(require,module,exports){
+},{"./api/attributes":22,"./api/css":23,"./api/manipulation":24,"./api/traversing":25,"./parse":27,"./static":28,"lodash":92,"path":161}],27:[function(require,module,exports){
 (function (Buffer){
 /*
   Module Dependencies
@@ -13866,7 +14215,7 @@ var update = exports.update = function(arr, parent) {
 // module.exports = $.extend(exports);
 
 }).call(this,{"isBuffer":require("../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js":159,"./utils":28,"htmlparser2":63}],27:[function(require,module,exports){
+},{"../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js":160,"./utils":29,"htmlparser2":64}],28:[function(require,module,exports){
 /**
  * Module dependencies
  */
@@ -14024,7 +14373,7 @@ var contains = exports.contains = function(container, contained) {
   return false;
 };
 
-},{"./cheerio":25,"./parse":26,"CSSselect":29,"dom-serializer":46,"lodash":91}],28:[function(require,module,exports){
+},{"./cheerio":26,"./parse":27,"CSSselect":30,"dom-serializer":47,"lodash":92}],29:[function(require,module,exports){
 /**
  * HTML Tags
  */
@@ -14077,7 +14426,7 @@ exports.domEach = function(cheerio, fn) {
   return cheerio;
 };
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 
 module.exports = CSSselect;
@@ -14133,7 +14482,7 @@ CSSselect.is = is;
 CSSselect.parse = compile;
 CSSselect.iterate = selectAll;
 
-},{"./lib/basefunctions.js":31,"./lib/compile.js":32,"./lib/pseudos.js":35,"domutils":38}],30:[function(require,module,exports){
+},{"./lib/basefunctions.js":32,"./lib/compile.js":33,"./lib/pseudos.js":36,"domutils":39}],31:[function(require,module,exports){
 var DomUtils  = require("domutils"),
     hasAttrib = DomUtils.hasAttrib,
     getAttributeValue = DomUtils.getAttributeValue,
@@ -14313,7 +14662,7 @@ module.exports = {
 	rules: attributeRules
 };
 
-},{"./basefunctions.js":31,"domutils":38}],31:[function(require,module,exports){
+},{"./basefunctions.js":32,"domutils":39}],32:[function(require,module,exports){
 module.exports = {
 	trueFunc: function trueFunc(){
 		return true;
@@ -14322,7 +14671,7 @@ module.exports = {
 		return false;
 	}
 };
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 /*
 	compiles a selector to an executable function
 */
@@ -14408,7 +14757,7 @@ filters.has = function(next, selector){
 	};
 };
 
-},{"./basefunctions.js":31,"./general.js":33,"./pseudos.js":35,"./sort.js":36,"CSSwhat":37,"domutils":38}],33:[function(require,module,exports){
+},{"./basefunctions.js":32,"./general.js":34,"./pseudos.js":36,"./sort.js":37,"CSSwhat":38,"domutils":39}],34:[function(require,module,exports){
 var DomUtils    = require("domutils"),
     isTag       = DomUtils.isTag,
     getParent   = DomUtils.getParent,
@@ -14489,7 +14838,7 @@ module.exports = {
 		return next;
 	}
 };
-},{"./attributes.js":30,"./pseudos.js":35,"domutils":38}],34:[function(require,module,exports){
+},{"./attributes.js":31,"./pseudos.js":36,"domutils":39}],35:[function(require,module,exports){
 var BaseFuncs = require("./basefunctions.js"),
     trueFunc  = BaseFuncs.trueFunc,
     falseFunc = BaseFuncs.falseFunc;
@@ -14574,7 +14923,7 @@ function compile(parsed){
 		return pos <= b && pos % a === bMod;
 	};
 }
-},{"./basefunctions.js":31}],35:[function(require,module,exports){
+},{"./basefunctions.js":32}],36:[function(require,module,exports){
 /*
 	pseudo selectors
 	
@@ -14914,7 +15263,7 @@ module.exports = {
 	pseudos: pseudos
 };
 
-},{"./attributes.js":30,"./basefunctions.js":31,"./nth-check.js":34,"domutils":38}],36:[function(require,module,exports){
+},{"./attributes.js":31,"./basefunctions.js":32,"./nth-check.js":35,"domutils":39}],37:[function(require,module,exports){
 module.exports = sortByProcedure;
 
 /*
@@ -14974,7 +15323,7 @@ function sortByProcedure(arr){
 	}
 	return arr;
 }
-},{}],37:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 "use strict";
 
 module.exports = parse;
@@ -15157,7 +15506,7 @@ function parse(selector, options){
 	subselects.push(tokens);
 	return subselects;
 }
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 var DomUtils = module.exports;
 
 [
@@ -15173,7 +15522,7 @@ var DomUtils = module.exports;
 	});
 });
 
-},{"./lib/helpers":39,"./lib/legacy":40,"./lib/manipulation":41,"./lib/querying":42,"./lib/stringify":43,"./lib/traversal":44}],39:[function(require,module,exports){
+},{"./lib/helpers":40,"./lib/legacy":41,"./lib/manipulation":42,"./lib/querying":43,"./lib/stringify":44,"./lib/traversal":45}],40:[function(require,module,exports){
 // removeSubsets
 // Given an array of nodes, remove any member that is contained by another.
 exports.removeSubsets = function(nodes) {
@@ -15206,7 +15555,7 @@ exports.removeSubsets = function(nodes) {
 	return nodes;
 };
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 var ElementType = require("domelementtype");
 var isTag = exports.isTag = ElementType.isTag;
 
@@ -15295,7 +15644,7 @@ exports.getElementsByTagType = function(type, element, recurse, limit){
 	return this.filter(Checks.tag_type(type), element, recurse, limit);
 };
 
-},{"domelementtype":45}],41:[function(require,module,exports){
+},{"domelementtype":46}],42:[function(require,module,exports){
 exports.removeElement = function(elem){
 	if(elem.prev) elem.prev.next = elem.next;
 	if(elem.next) elem.next.prev = elem.prev;
@@ -15374,7 +15723,7 @@ exports.prepend = function(elem, prev){
 
 
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 var isTag = require("domelementtype").isTag;
 
 module.exports = {
@@ -15470,7 +15819,7 @@ function findAll(test, elems){
 	return result;
 }
 
-},{"domelementtype":45}],43:[function(require,module,exports){
+},{"domelementtype":46}],44:[function(require,module,exports){
 var ElementType = require("domelementtype"),
     isTag = ElementType.isTag;
 
@@ -15564,7 +15913,7 @@ function getText(elem){
 	if(elem.type === ElementType.Text) return elem.data;
 	return "";
 }
-},{"domelementtype":45}],44:[function(require,module,exports){
+},{"domelementtype":46}],45:[function(require,module,exports){
 var getChildren = exports.getChildren = function(elem){
 	return elem.children;
 };
@@ -15590,7 +15939,7 @@ exports.getName = function(elem){
 	return elem.name;
 };
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 //Types of elements found in the DOM
 module.exports = {
 	Text: "text", //Text
@@ -15607,7 +15956,7 @@ module.exports = {
 	}
 };
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 /*
   Module dependencies
 */
@@ -15791,7 +16140,7 @@ function renderComment(elem) {
   return '<!--' + elem.data + '-->';
 }
 
-},{"domelementtype":47,"entities":48}],47:[function(require,module,exports){
+},{"domelementtype":48,"entities":49}],48:[function(require,module,exports){
 //Types of elements found in the DOM
 module.exports = {
 	Text: "text", //Text
@@ -15806,7 +16155,7 @@ module.exports = {
 		return elem.type === "tag" || elem.type === "script" || elem.type === "style";
 	}
 };
-},{}],48:[function(require,module,exports){
+},{}],49:[function(require,module,exports){
 var encode = require("./lib/encode.js"),
     decode = require("./lib/decode.js");
 
@@ -15841,7 +16190,7 @@ exports.decodeHTMLStrict = decode.HTMLStrict;
 
 exports.escape = encode.escape;
 
-},{"./lib/decode.js":49,"./lib/encode.js":51}],49:[function(require,module,exports){
+},{"./lib/decode.js":50,"./lib/encode.js":52}],50:[function(require,module,exports){
 var entityMap = require("../maps/entities.json"),
     legacyMap = require("../maps/legacy.json"),
     xmlMap    = require("../maps/xml.json"),
@@ -15914,7 +16263,7 @@ module.exports = {
 	HTML: decodeHTML,
 	HTMLStrict: decodeHTMLStrict
 };
-},{"../maps/entities.json":53,"../maps/legacy.json":54,"../maps/xml.json":55,"./decode_codepoint.js":50}],50:[function(require,module,exports){
+},{"../maps/entities.json":54,"../maps/legacy.json":55,"../maps/xml.json":56,"./decode_codepoint.js":51}],51:[function(require,module,exports){
 var decodeMap = require("../maps/decode.json");
 
 module.exports = decodeCodePoint;
@@ -15942,7 +16291,7 @@ function decodeCodePoint(codePoint){
 	return output;
 }
 
-},{"../maps/decode.json":52}],51:[function(require,module,exports){
+},{"../maps/decode.json":53}],52:[function(require,module,exports){
 var inverseXML = getInverseObj(require("../maps/xml.json")),
     xmlReplacer = getInverseReplacer(inverseXML);
 
@@ -16017,16 +16366,16 @@ function escapeXML(data){
 
 exports.escape = escapeXML;
 
-},{"../maps/entities.json":53,"../maps/xml.json":55}],52:[function(require,module,exports){
+},{"../maps/entities.json":54,"../maps/xml.json":56}],53:[function(require,module,exports){
 module.exports={"0":65533,"128":8364,"130":8218,"131":402,"132":8222,"133":8230,"134":8224,"135":8225,"136":710,"137":8240,"138":352,"139":8249,"140":338,"142":381,"145":8216,"146":8217,"147":8220,"148":8221,"149":8226,"150":8211,"151":8212,"152":732,"153":8482,"154":353,"155":8250,"156":339,"158":382,"159":376}
-},{}],53:[function(require,module,exports){
-module.exports={"Aacute":"\u00C1","aacute":"\u00E1","Abreve":"\u0102","abreve":"\u0103","ac":"\u223E","acd":"\u223F","acE":"\u223E\u0333","Acirc":"\u00C2","acirc":"\u00E2","acute":"\u00B4","Acy":"\u0410","acy":"\u0430","AElig":"\u00C6","aelig":"\u00E6","af":"\u2061","Afr":"\uD835\uDD04","afr":"\uD835\uDD1E","Agrave":"\u00C0","agrave":"\u00E0","alefsym":"\u2135","aleph":"\u2135","Alpha":"\u0391","alpha":"\u03B1","Amacr":"\u0100","amacr":"\u0101","amalg":"\u2A3F","amp":"&","AMP":"&","andand":"\u2A55","And":"\u2A53","and":"\u2227","andd":"\u2A5C","andslope":"\u2A58","andv":"\u2A5A","ang":"\u2220","ange":"\u29A4","angle":"\u2220","angmsdaa":"\u29A8","angmsdab":"\u29A9","angmsdac":"\u29AA","angmsdad":"\u29AB","angmsdae":"\u29AC","angmsdaf":"\u29AD","angmsdag":"\u29AE","angmsdah":"\u29AF","angmsd":"\u2221","angrt":"\u221F","angrtvb":"\u22BE","angrtvbd":"\u299D","angsph":"\u2222","angst":"\u00C5","angzarr":"\u237C","Aogon":"\u0104","aogon":"\u0105","Aopf":"\uD835\uDD38","aopf":"\uD835\uDD52","apacir":"\u2A6F","ap":"\u2248","apE":"\u2A70","ape":"\u224A","apid":"\u224B","apos":"'","ApplyFunction":"\u2061","approx":"\u2248","approxeq":"\u224A","Aring":"\u00C5","aring":"\u00E5","Ascr":"\uD835\uDC9C","ascr":"\uD835\uDCB6","Assign":"\u2254","ast":"*","asymp":"\u2248","asympeq":"\u224D","Atilde":"\u00C3","atilde":"\u00E3","Auml":"\u00C4","auml":"\u00E4","awconint":"\u2233","awint":"\u2A11","backcong":"\u224C","backepsilon":"\u03F6","backprime":"\u2035","backsim":"\u223D","backsimeq":"\u22CD","Backslash":"\u2216","Barv":"\u2AE7","barvee":"\u22BD","barwed":"\u2305","Barwed":"\u2306","barwedge":"\u2305","bbrk":"\u23B5","bbrktbrk":"\u23B6","bcong":"\u224C","Bcy":"\u0411","bcy":"\u0431","bdquo":"\u201E","becaus":"\u2235","because":"\u2235","Because":"\u2235","bemptyv":"\u29B0","bepsi":"\u03F6","bernou":"\u212C","Bernoullis":"\u212C","Beta":"\u0392","beta":"\u03B2","beth":"\u2136","between":"\u226C","Bfr":"\uD835\uDD05","bfr":"\uD835\uDD1F","bigcap":"\u22C2","bigcirc":"\u25EF","bigcup":"\u22C3","bigodot":"\u2A00","bigoplus":"\u2A01","bigotimes":"\u2A02","bigsqcup":"\u2A06","bigstar":"\u2605","bigtriangledown":"\u25BD","bigtriangleup":"\u25B3","biguplus":"\u2A04","bigvee":"\u22C1","bigwedge":"\u22C0","bkarow":"\u290D","blacklozenge":"\u29EB","blacksquare":"\u25AA","blacktriangle":"\u25B4","blacktriangledown":"\u25BE","blacktriangleleft":"\u25C2","blacktriangleright":"\u25B8","blank":"\u2423","blk12":"\u2592","blk14":"\u2591","blk34":"\u2593","block":"\u2588","bne":"=\u20E5","bnequiv":"\u2261\u20E5","bNot":"\u2AED","bnot":"\u2310","Bopf":"\uD835\uDD39","bopf":"\uD835\uDD53","bot":"\u22A5","bottom":"\u22A5","bowtie":"\u22C8","boxbox":"\u29C9","boxdl":"\u2510","boxdL":"\u2555","boxDl":"\u2556","boxDL":"\u2557","boxdr":"\u250C","boxdR":"\u2552","boxDr":"\u2553","boxDR":"\u2554","boxh":"\u2500","boxH":"\u2550","boxhd":"\u252C","boxHd":"\u2564","boxhD":"\u2565","boxHD":"\u2566","boxhu":"\u2534","boxHu":"\u2567","boxhU":"\u2568","boxHU":"\u2569","boxminus":"\u229F","boxplus":"\u229E","boxtimes":"\u22A0","boxul":"\u2518","boxuL":"\u255B","boxUl":"\u255C","boxUL":"\u255D","boxur":"\u2514","boxuR":"\u2558","boxUr":"\u2559","boxUR":"\u255A","boxv":"\u2502","boxV":"\u2551","boxvh":"\u253C","boxvH":"\u256A","boxVh":"\u256B","boxVH":"\u256C","boxvl":"\u2524","boxvL":"\u2561","boxVl":"\u2562","boxVL":"\u2563","boxvr":"\u251C","boxvR":"\u255E","boxVr":"\u255F","boxVR":"\u2560","bprime":"\u2035","breve":"\u02D8","Breve":"\u02D8","brvbar":"\u00A6","bscr":"\uD835\uDCB7","Bscr":"\u212C","bsemi":"\u204F","bsim":"\u223D","bsime":"\u22CD","bsolb":"\u29C5","bsol":"\\","bsolhsub":"\u27C8","bull":"\u2022","bullet":"\u2022","bump":"\u224E","bumpE":"\u2AAE","bumpe":"\u224F","Bumpeq":"\u224E","bumpeq":"\u224F","Cacute":"\u0106","cacute":"\u0107","capand":"\u2A44","capbrcup":"\u2A49","capcap":"\u2A4B","cap":"\u2229","Cap":"\u22D2","capcup":"\u2A47","capdot":"\u2A40","CapitalDifferentialD":"\u2145","caps":"\u2229\uFE00","caret":"\u2041","caron":"\u02C7","Cayleys":"\u212D","ccaps":"\u2A4D","Ccaron":"\u010C","ccaron":"\u010D","Ccedil":"\u00C7","ccedil":"\u00E7","Ccirc":"\u0108","ccirc":"\u0109","Cconint":"\u2230","ccups":"\u2A4C","ccupssm":"\u2A50","Cdot":"\u010A","cdot":"\u010B","cedil":"\u00B8","Cedilla":"\u00B8","cemptyv":"\u29B2","cent":"\u00A2","centerdot":"\u00B7","CenterDot":"\u00B7","cfr":"\uD835\uDD20","Cfr":"\u212D","CHcy":"\u0427","chcy":"\u0447","check":"\u2713","checkmark":"\u2713","Chi":"\u03A7","chi":"\u03C7","circ":"\u02C6","circeq":"\u2257","circlearrowleft":"\u21BA","circlearrowright":"\u21BB","circledast":"\u229B","circledcirc":"\u229A","circleddash":"\u229D","CircleDot":"\u2299","circledR":"\u00AE","circledS":"\u24C8","CircleMinus":"\u2296","CirclePlus":"\u2295","CircleTimes":"\u2297","cir":"\u25CB","cirE":"\u29C3","cire":"\u2257","cirfnint":"\u2A10","cirmid":"\u2AEF","cirscir":"\u29C2","ClockwiseContourIntegral":"\u2232","CloseCurlyDoubleQuote":"\u201D","CloseCurlyQuote":"\u2019","clubs":"\u2663","clubsuit":"\u2663","colon":":","Colon":"\u2237","Colone":"\u2A74","colone":"\u2254","coloneq":"\u2254","comma":",","commat":"@","comp":"\u2201","compfn":"\u2218","complement":"\u2201","complexes":"\u2102","cong":"\u2245","congdot":"\u2A6D","Congruent":"\u2261","conint":"\u222E","Conint":"\u222F","ContourIntegral":"\u222E","copf":"\uD835\uDD54","Copf":"\u2102","coprod":"\u2210","Coproduct":"\u2210","copy":"\u00A9","COPY":"\u00A9","copysr":"\u2117","CounterClockwiseContourIntegral":"\u2233","crarr":"\u21B5","cross":"\u2717","Cross":"\u2A2F","Cscr":"\uD835\uDC9E","cscr":"\uD835\uDCB8","csub":"\u2ACF","csube":"\u2AD1","csup":"\u2AD0","csupe":"\u2AD2","ctdot":"\u22EF","cudarrl":"\u2938","cudarrr":"\u2935","cuepr":"\u22DE","cuesc":"\u22DF","cularr":"\u21B6","cularrp":"\u293D","cupbrcap":"\u2A48","cupcap":"\u2A46","CupCap":"\u224D","cup":"\u222A","Cup":"\u22D3","cupcup":"\u2A4A","cupdot":"\u228D","cupor":"\u2A45","cups":"\u222A\uFE00","curarr":"\u21B7","curarrm":"\u293C","curlyeqprec":"\u22DE","curlyeqsucc":"\u22DF","curlyvee":"\u22CE","curlywedge":"\u22CF","curren":"\u00A4","curvearrowleft":"\u21B6","curvearrowright":"\u21B7","cuvee":"\u22CE","cuwed":"\u22CF","cwconint":"\u2232","cwint":"\u2231","cylcty":"\u232D","dagger":"\u2020","Dagger":"\u2021","daleth":"\u2138","darr":"\u2193","Darr":"\u21A1","dArr":"\u21D3","dash":"\u2010","Dashv":"\u2AE4","dashv":"\u22A3","dbkarow":"\u290F","dblac":"\u02DD","Dcaron":"\u010E","dcaron":"\u010F","Dcy":"\u0414","dcy":"\u0434","ddagger":"\u2021","ddarr":"\u21CA","DD":"\u2145","dd":"\u2146","DDotrahd":"\u2911","ddotseq":"\u2A77","deg":"\u00B0","Del":"\u2207","Delta":"\u0394","delta":"\u03B4","demptyv":"\u29B1","dfisht":"\u297F","Dfr":"\uD835\uDD07","dfr":"\uD835\uDD21","dHar":"\u2965","dharl":"\u21C3","dharr":"\u21C2","DiacriticalAcute":"\u00B4","DiacriticalDot":"\u02D9","DiacriticalDoubleAcute":"\u02DD","DiacriticalGrave":"`","DiacriticalTilde":"\u02DC","diam":"\u22C4","diamond":"\u22C4","Diamond":"\u22C4","diamondsuit":"\u2666","diams":"\u2666","die":"\u00A8","DifferentialD":"\u2146","digamma":"\u03DD","disin":"\u22F2","div":"\u00F7","divide":"\u00F7","divideontimes":"\u22C7","divonx":"\u22C7","DJcy":"\u0402","djcy":"\u0452","dlcorn":"\u231E","dlcrop":"\u230D","dollar":"$","Dopf":"\uD835\uDD3B","dopf":"\uD835\uDD55","Dot":"\u00A8","dot":"\u02D9","DotDot":"\u20DC","doteq":"\u2250","doteqdot":"\u2251","DotEqual":"\u2250","dotminus":"\u2238","dotplus":"\u2214","dotsquare":"\u22A1","doublebarwedge":"\u2306","DoubleContourIntegral":"\u222F","DoubleDot":"\u00A8","DoubleDownArrow":"\u21D3","DoubleLeftArrow":"\u21D0","DoubleLeftRightArrow":"\u21D4","DoubleLeftTee":"\u2AE4","DoubleLongLeftArrow":"\u27F8","DoubleLongLeftRightArrow":"\u27FA","DoubleLongRightArrow":"\u27F9","DoubleRightArrow":"\u21D2","DoubleRightTee":"\u22A8","DoubleUpArrow":"\u21D1","DoubleUpDownArrow":"\u21D5","DoubleVerticalBar":"\u2225","DownArrowBar":"\u2913","downarrow":"\u2193","DownArrow":"\u2193","Downarrow":"\u21D3","DownArrowUpArrow":"\u21F5","DownBreve":"\u0311","downdownarrows":"\u21CA","downharpoonleft":"\u21C3","downharpoonright":"\u21C2","DownLeftRightVector":"\u2950","DownLeftTeeVector":"\u295E","DownLeftVectorBar":"\u2956","DownLeftVector":"\u21BD","DownRightTeeVector":"\u295F","DownRightVectorBar":"\u2957","DownRightVector":"\u21C1","DownTeeArrow":"\u21A7","DownTee":"\u22A4","drbkarow":"\u2910","drcorn":"\u231F","drcrop":"\u230C","Dscr":"\uD835\uDC9F","dscr":"\uD835\uDCB9","DScy":"\u0405","dscy":"\u0455","dsol":"\u29F6","Dstrok":"\u0110","dstrok":"\u0111","dtdot":"\u22F1","dtri":"\u25BF","dtrif":"\u25BE","duarr":"\u21F5","duhar":"\u296F","dwangle":"\u29A6","DZcy":"\u040F","dzcy":"\u045F","dzigrarr":"\u27FF","Eacute":"\u00C9","eacute":"\u00E9","easter":"\u2A6E","Ecaron":"\u011A","ecaron":"\u011B","Ecirc":"\u00CA","ecirc":"\u00EA","ecir":"\u2256","ecolon":"\u2255","Ecy":"\u042D","ecy":"\u044D","eDDot":"\u2A77","Edot":"\u0116","edot":"\u0117","eDot":"\u2251","ee":"\u2147","efDot":"\u2252","Efr":"\uD835\uDD08","efr":"\uD835\uDD22","eg":"\u2A9A","Egrave":"\u00C8","egrave":"\u00E8","egs":"\u2A96","egsdot":"\u2A98","el":"\u2A99","Element":"\u2208","elinters":"\u23E7","ell":"\u2113","els":"\u2A95","elsdot":"\u2A97","Emacr":"\u0112","emacr":"\u0113","empty":"\u2205","emptyset":"\u2205","EmptySmallSquare":"\u25FB","emptyv":"\u2205","EmptyVerySmallSquare":"\u25AB","emsp13":"\u2004","emsp14":"\u2005","emsp":"\u2003","ENG":"\u014A","eng":"\u014B","ensp":"\u2002","Eogon":"\u0118","eogon":"\u0119","Eopf":"\uD835\uDD3C","eopf":"\uD835\uDD56","epar":"\u22D5","eparsl":"\u29E3","eplus":"\u2A71","epsi":"\u03B5","Epsilon":"\u0395","epsilon":"\u03B5","epsiv":"\u03F5","eqcirc":"\u2256","eqcolon":"\u2255","eqsim":"\u2242","eqslantgtr":"\u2A96","eqslantless":"\u2A95","Equal":"\u2A75","equals":"=","EqualTilde":"\u2242","equest":"\u225F","Equilibrium":"\u21CC","equiv":"\u2261","equivDD":"\u2A78","eqvparsl":"\u29E5","erarr":"\u2971","erDot":"\u2253","escr":"\u212F","Escr":"\u2130","esdot":"\u2250","Esim":"\u2A73","esim":"\u2242","Eta":"\u0397","eta":"\u03B7","ETH":"\u00D0","eth":"\u00F0","Euml":"\u00CB","euml":"\u00EB","euro":"\u20AC","excl":"!","exist":"\u2203","Exists":"\u2203","expectation":"\u2130","exponentiale":"\u2147","ExponentialE":"\u2147","fallingdotseq":"\u2252","Fcy":"\u0424","fcy":"\u0444","female":"\u2640","ffilig":"\uFB03","fflig":"\uFB00","ffllig":"\uFB04","Ffr":"\uD835\uDD09","ffr":"\uD835\uDD23","filig":"\uFB01","FilledSmallSquare":"\u25FC","FilledVerySmallSquare":"\u25AA","fjlig":"fj","flat":"\u266D","fllig":"\uFB02","fltns":"\u25B1","fnof":"\u0192","Fopf":"\uD835\uDD3D","fopf":"\uD835\uDD57","forall":"\u2200","ForAll":"\u2200","fork":"\u22D4","forkv":"\u2AD9","Fouriertrf":"\u2131","fpartint":"\u2A0D","frac12":"\u00BD","frac13":"\u2153","frac14":"\u00BC","frac15":"\u2155","frac16":"\u2159","frac18":"\u215B","frac23":"\u2154","frac25":"\u2156","frac34":"\u00BE","frac35":"\u2157","frac38":"\u215C","frac45":"\u2158","frac56":"\u215A","frac58":"\u215D","frac78":"\u215E","frasl":"\u2044","frown":"\u2322","fscr":"\uD835\uDCBB","Fscr":"\u2131","gacute":"\u01F5","Gamma":"\u0393","gamma":"\u03B3","Gammad":"\u03DC","gammad":"\u03DD","gap":"\u2A86","Gbreve":"\u011E","gbreve":"\u011F","Gcedil":"\u0122","Gcirc":"\u011C","gcirc":"\u011D","Gcy":"\u0413","gcy":"\u0433","Gdot":"\u0120","gdot":"\u0121","ge":"\u2265","gE":"\u2267","gEl":"\u2A8C","gel":"\u22DB","geq":"\u2265","geqq":"\u2267","geqslant":"\u2A7E","gescc":"\u2AA9","ges":"\u2A7E","gesdot":"\u2A80","gesdoto":"\u2A82","gesdotol":"\u2A84","gesl":"\u22DB\uFE00","gesles":"\u2A94","Gfr":"\uD835\uDD0A","gfr":"\uD835\uDD24","gg":"\u226B","Gg":"\u22D9","ggg":"\u22D9","gimel":"\u2137","GJcy":"\u0403","gjcy":"\u0453","gla":"\u2AA5","gl":"\u2277","glE":"\u2A92","glj":"\u2AA4","gnap":"\u2A8A","gnapprox":"\u2A8A","gne":"\u2A88","gnE":"\u2269","gneq":"\u2A88","gneqq":"\u2269","gnsim":"\u22E7","Gopf":"\uD835\uDD3E","gopf":"\uD835\uDD58","grave":"`","GreaterEqual":"\u2265","GreaterEqualLess":"\u22DB","GreaterFullEqual":"\u2267","GreaterGreater":"\u2AA2","GreaterLess":"\u2277","GreaterSlantEqual":"\u2A7E","GreaterTilde":"\u2273","Gscr":"\uD835\uDCA2","gscr":"\u210A","gsim":"\u2273","gsime":"\u2A8E","gsiml":"\u2A90","gtcc":"\u2AA7","gtcir":"\u2A7A","gt":">","GT":">","Gt":"\u226B","gtdot":"\u22D7","gtlPar":"\u2995","gtquest":"\u2A7C","gtrapprox":"\u2A86","gtrarr":"\u2978","gtrdot":"\u22D7","gtreqless":"\u22DB","gtreqqless":"\u2A8C","gtrless":"\u2277","gtrsim":"\u2273","gvertneqq":"\u2269\uFE00","gvnE":"\u2269\uFE00","Hacek":"\u02C7","hairsp":"\u200A","half":"\u00BD","hamilt":"\u210B","HARDcy":"\u042A","hardcy":"\u044A","harrcir":"\u2948","harr":"\u2194","hArr":"\u21D4","harrw":"\u21AD","Hat":"^","hbar":"\u210F","Hcirc":"\u0124","hcirc":"\u0125","hearts":"\u2665","heartsuit":"\u2665","hellip":"\u2026","hercon":"\u22B9","hfr":"\uD835\uDD25","Hfr":"\u210C","HilbertSpace":"\u210B","hksearow":"\u2925","hkswarow":"\u2926","hoarr":"\u21FF","homtht":"\u223B","hookleftarrow":"\u21A9","hookrightarrow":"\u21AA","hopf":"\uD835\uDD59","Hopf":"\u210D","horbar":"\u2015","HorizontalLine":"\u2500","hscr":"\uD835\uDCBD","Hscr":"\u210B","hslash":"\u210F","Hstrok":"\u0126","hstrok":"\u0127","HumpDownHump":"\u224E","HumpEqual":"\u224F","hybull":"\u2043","hyphen":"\u2010","Iacute":"\u00CD","iacute":"\u00ED","ic":"\u2063","Icirc":"\u00CE","icirc":"\u00EE","Icy":"\u0418","icy":"\u0438","Idot":"\u0130","IEcy":"\u0415","iecy":"\u0435","iexcl":"\u00A1","iff":"\u21D4","ifr":"\uD835\uDD26","Ifr":"\u2111","Igrave":"\u00CC","igrave":"\u00EC","ii":"\u2148","iiiint":"\u2A0C","iiint":"\u222D","iinfin":"\u29DC","iiota":"\u2129","IJlig":"\u0132","ijlig":"\u0133","Imacr":"\u012A","imacr":"\u012B","image":"\u2111","ImaginaryI":"\u2148","imagline":"\u2110","imagpart":"\u2111","imath":"\u0131","Im":"\u2111","imof":"\u22B7","imped":"\u01B5","Implies":"\u21D2","incare":"\u2105","in":"\u2208","infin":"\u221E","infintie":"\u29DD","inodot":"\u0131","intcal":"\u22BA","int":"\u222B","Int":"\u222C","integers":"\u2124","Integral":"\u222B","intercal":"\u22BA","Intersection":"\u22C2","intlarhk":"\u2A17","intprod":"\u2A3C","InvisibleComma":"\u2063","InvisibleTimes":"\u2062","IOcy":"\u0401","iocy":"\u0451","Iogon":"\u012E","iogon":"\u012F","Iopf":"\uD835\uDD40","iopf":"\uD835\uDD5A","Iota":"\u0399","iota":"\u03B9","iprod":"\u2A3C","iquest":"\u00BF","iscr":"\uD835\uDCBE","Iscr":"\u2110","isin":"\u2208","isindot":"\u22F5","isinE":"\u22F9","isins":"\u22F4","isinsv":"\u22F3","isinv":"\u2208","it":"\u2062","Itilde":"\u0128","itilde":"\u0129","Iukcy":"\u0406","iukcy":"\u0456","Iuml":"\u00CF","iuml":"\u00EF","Jcirc":"\u0134","jcirc":"\u0135","Jcy":"\u0419","jcy":"\u0439","Jfr":"\uD835\uDD0D","jfr":"\uD835\uDD27","jmath":"\u0237","Jopf":"\uD835\uDD41","jopf":"\uD835\uDD5B","Jscr":"\uD835\uDCA5","jscr":"\uD835\uDCBF","Jsercy":"\u0408","jsercy":"\u0458","Jukcy":"\u0404","jukcy":"\u0454","Kappa":"\u039A","kappa":"\u03BA","kappav":"\u03F0","Kcedil":"\u0136","kcedil":"\u0137","Kcy":"\u041A","kcy":"\u043A","Kfr":"\uD835\uDD0E","kfr":"\uD835\uDD28","kgreen":"\u0138","KHcy":"\u0425","khcy":"\u0445","KJcy":"\u040C","kjcy":"\u045C","Kopf":"\uD835\uDD42","kopf":"\uD835\uDD5C","Kscr":"\uD835\uDCA6","kscr":"\uD835\uDCC0","lAarr":"\u21DA","Lacute":"\u0139","lacute":"\u013A","laemptyv":"\u29B4","lagran":"\u2112","Lambda":"\u039B","lambda":"\u03BB","lang":"\u27E8","Lang":"\u27EA","langd":"\u2991","langle":"\u27E8","lap":"\u2A85","Laplacetrf":"\u2112","laquo":"\u00AB","larrb":"\u21E4","larrbfs":"\u291F","larr":"\u2190","Larr":"\u219E","lArr":"\u21D0","larrfs":"\u291D","larrhk":"\u21A9","larrlp":"\u21AB","larrpl":"\u2939","larrsim":"\u2973","larrtl":"\u21A2","latail":"\u2919","lAtail":"\u291B","lat":"\u2AAB","late":"\u2AAD","lates":"\u2AAD\uFE00","lbarr":"\u290C","lBarr":"\u290E","lbbrk":"\u2772","lbrace":"{","lbrack":"[","lbrke":"\u298B","lbrksld":"\u298F","lbrkslu":"\u298D","Lcaron":"\u013D","lcaron":"\u013E","Lcedil":"\u013B","lcedil":"\u013C","lceil":"\u2308","lcub":"{","Lcy":"\u041B","lcy":"\u043B","ldca":"\u2936","ldquo":"\u201C","ldquor":"\u201E","ldrdhar":"\u2967","ldrushar":"\u294B","ldsh":"\u21B2","le":"\u2264","lE":"\u2266","LeftAngleBracket":"\u27E8","LeftArrowBar":"\u21E4","leftarrow":"\u2190","LeftArrow":"\u2190","Leftarrow":"\u21D0","LeftArrowRightArrow":"\u21C6","leftarrowtail":"\u21A2","LeftCeiling":"\u2308","LeftDoubleBracket":"\u27E6","LeftDownTeeVector":"\u2961","LeftDownVectorBar":"\u2959","LeftDownVector":"\u21C3","LeftFloor":"\u230A","leftharpoondown":"\u21BD","leftharpoonup":"\u21BC","leftleftarrows":"\u21C7","leftrightarrow":"\u2194","LeftRightArrow":"\u2194","Leftrightarrow":"\u21D4","leftrightarrows":"\u21C6","leftrightharpoons":"\u21CB","leftrightsquigarrow":"\u21AD","LeftRightVector":"\u294E","LeftTeeArrow":"\u21A4","LeftTee":"\u22A3","LeftTeeVector":"\u295A","leftthreetimes":"\u22CB","LeftTriangleBar":"\u29CF","LeftTriangle":"\u22B2","LeftTriangleEqual":"\u22B4","LeftUpDownVector":"\u2951","LeftUpTeeVector":"\u2960","LeftUpVectorBar":"\u2958","LeftUpVector":"\u21BF","LeftVectorBar":"\u2952","LeftVector":"\u21BC","lEg":"\u2A8B","leg":"\u22DA","leq":"\u2264","leqq":"\u2266","leqslant":"\u2A7D","lescc":"\u2AA8","les":"\u2A7D","lesdot":"\u2A7F","lesdoto":"\u2A81","lesdotor":"\u2A83","lesg":"\u22DA\uFE00","lesges":"\u2A93","lessapprox":"\u2A85","lessdot":"\u22D6","lesseqgtr":"\u22DA","lesseqqgtr":"\u2A8B","LessEqualGreater":"\u22DA","LessFullEqual":"\u2266","LessGreater":"\u2276","lessgtr":"\u2276","LessLess":"\u2AA1","lesssim":"\u2272","LessSlantEqual":"\u2A7D","LessTilde":"\u2272","lfisht":"\u297C","lfloor":"\u230A","Lfr":"\uD835\uDD0F","lfr":"\uD835\uDD29","lg":"\u2276","lgE":"\u2A91","lHar":"\u2962","lhard":"\u21BD","lharu":"\u21BC","lharul":"\u296A","lhblk":"\u2584","LJcy":"\u0409","ljcy":"\u0459","llarr":"\u21C7","ll":"\u226A","Ll":"\u22D8","llcorner":"\u231E","Lleftarrow":"\u21DA","llhard":"\u296B","lltri":"\u25FA","Lmidot":"\u013F","lmidot":"\u0140","lmoustache":"\u23B0","lmoust":"\u23B0","lnap":"\u2A89","lnapprox":"\u2A89","lne":"\u2A87","lnE":"\u2268","lneq":"\u2A87","lneqq":"\u2268","lnsim":"\u22E6","loang":"\u27EC","loarr":"\u21FD","lobrk":"\u27E6","longleftarrow":"\u27F5","LongLeftArrow":"\u27F5","Longleftarrow":"\u27F8","longleftrightarrow":"\u27F7","LongLeftRightArrow":"\u27F7","Longleftrightarrow":"\u27FA","longmapsto":"\u27FC","longrightarrow":"\u27F6","LongRightArrow":"\u27F6","Longrightarrow":"\u27F9","looparrowleft":"\u21AB","looparrowright":"\u21AC","lopar":"\u2985","Lopf":"\uD835\uDD43","lopf":"\uD835\uDD5D","loplus":"\u2A2D","lotimes":"\u2A34","lowast":"\u2217","lowbar":"_","LowerLeftArrow":"\u2199","LowerRightArrow":"\u2198","loz":"\u25CA","lozenge":"\u25CA","lozf":"\u29EB","lpar":"(","lparlt":"\u2993","lrarr":"\u21C6","lrcorner":"\u231F","lrhar":"\u21CB","lrhard":"\u296D","lrm":"\u200E","lrtri":"\u22BF","lsaquo":"\u2039","lscr":"\uD835\uDCC1","Lscr":"\u2112","lsh":"\u21B0","Lsh":"\u21B0","lsim":"\u2272","lsime":"\u2A8D","lsimg":"\u2A8F","lsqb":"[","lsquo":"\u2018","lsquor":"\u201A","Lstrok":"\u0141","lstrok":"\u0142","ltcc":"\u2AA6","ltcir":"\u2A79","lt":"<","LT":"<","Lt":"\u226A","ltdot":"\u22D6","lthree":"\u22CB","ltimes":"\u22C9","ltlarr":"\u2976","ltquest":"\u2A7B","ltri":"\u25C3","ltrie":"\u22B4","ltrif":"\u25C2","ltrPar":"\u2996","lurdshar":"\u294A","luruhar":"\u2966","lvertneqq":"\u2268\uFE00","lvnE":"\u2268\uFE00","macr":"\u00AF","male":"\u2642","malt":"\u2720","maltese":"\u2720","Map":"\u2905","map":"\u21A6","mapsto":"\u21A6","mapstodown":"\u21A7","mapstoleft":"\u21A4","mapstoup":"\u21A5","marker":"\u25AE","mcomma":"\u2A29","Mcy":"\u041C","mcy":"\u043C","mdash":"\u2014","mDDot":"\u223A","measuredangle":"\u2221","MediumSpace":"\u205F","Mellintrf":"\u2133","Mfr":"\uD835\uDD10","mfr":"\uD835\uDD2A","mho":"\u2127","micro":"\u00B5","midast":"*","midcir":"\u2AF0","mid":"\u2223","middot":"\u00B7","minusb":"\u229F","minus":"\u2212","minusd":"\u2238","minusdu":"\u2A2A","MinusPlus":"\u2213","mlcp":"\u2ADB","mldr":"\u2026","mnplus":"\u2213","models":"\u22A7","Mopf":"\uD835\uDD44","mopf":"\uD835\uDD5E","mp":"\u2213","mscr":"\uD835\uDCC2","Mscr":"\u2133","mstpos":"\u223E","Mu":"\u039C","mu":"\u03BC","multimap":"\u22B8","mumap":"\u22B8","nabla":"\u2207","Nacute":"\u0143","nacute":"\u0144","nang":"\u2220\u20D2","nap":"\u2249","napE":"\u2A70\u0338","napid":"\u224B\u0338","napos":"\u0149","napprox":"\u2249","natural":"\u266E","naturals":"\u2115","natur":"\u266E","nbsp":"\u00A0","nbump":"\u224E\u0338","nbumpe":"\u224F\u0338","ncap":"\u2A43","Ncaron":"\u0147","ncaron":"\u0148","Ncedil":"\u0145","ncedil":"\u0146","ncong":"\u2247","ncongdot":"\u2A6D\u0338","ncup":"\u2A42","Ncy":"\u041D","ncy":"\u043D","ndash":"\u2013","nearhk":"\u2924","nearr":"\u2197","neArr":"\u21D7","nearrow":"\u2197","ne":"\u2260","nedot":"\u2250\u0338","NegativeMediumSpace":"\u200B","NegativeThickSpace":"\u200B","NegativeThinSpace":"\u200B","NegativeVeryThinSpace":"\u200B","nequiv":"\u2262","nesear":"\u2928","nesim":"\u2242\u0338","NestedGreaterGreater":"\u226B","NestedLessLess":"\u226A","NewLine":"\n","nexist":"\u2204","nexists":"\u2204","Nfr":"\uD835\uDD11","nfr":"\uD835\uDD2B","ngE":"\u2267\u0338","nge":"\u2271","ngeq":"\u2271","ngeqq":"\u2267\u0338","ngeqslant":"\u2A7E\u0338","nges":"\u2A7E\u0338","nGg":"\u22D9\u0338","ngsim":"\u2275","nGt":"\u226B\u20D2","ngt":"\u226F","ngtr":"\u226F","nGtv":"\u226B\u0338","nharr":"\u21AE","nhArr":"\u21CE","nhpar":"\u2AF2","ni":"\u220B","nis":"\u22FC","nisd":"\u22FA","niv":"\u220B","NJcy":"\u040A","njcy":"\u045A","nlarr":"\u219A","nlArr":"\u21CD","nldr":"\u2025","nlE":"\u2266\u0338","nle":"\u2270","nleftarrow":"\u219A","nLeftarrow":"\u21CD","nleftrightarrow":"\u21AE","nLeftrightarrow":"\u21CE","nleq":"\u2270","nleqq":"\u2266\u0338","nleqslant":"\u2A7D\u0338","nles":"\u2A7D\u0338","nless":"\u226E","nLl":"\u22D8\u0338","nlsim":"\u2274","nLt":"\u226A\u20D2","nlt":"\u226E","nltri":"\u22EA","nltrie":"\u22EC","nLtv":"\u226A\u0338","nmid":"\u2224","NoBreak":"\u2060","NonBreakingSpace":"\u00A0","nopf":"\uD835\uDD5F","Nopf":"\u2115","Not":"\u2AEC","not":"\u00AC","NotCongruent":"\u2262","NotCupCap":"\u226D","NotDoubleVerticalBar":"\u2226","NotElement":"\u2209","NotEqual":"\u2260","NotEqualTilde":"\u2242\u0338","NotExists":"\u2204","NotGreater":"\u226F","NotGreaterEqual":"\u2271","NotGreaterFullEqual":"\u2267\u0338","NotGreaterGreater":"\u226B\u0338","NotGreaterLess":"\u2279","NotGreaterSlantEqual":"\u2A7E\u0338","NotGreaterTilde":"\u2275","NotHumpDownHump":"\u224E\u0338","NotHumpEqual":"\u224F\u0338","notin":"\u2209","notindot":"\u22F5\u0338","notinE":"\u22F9\u0338","notinva":"\u2209","notinvb":"\u22F7","notinvc":"\u22F6","NotLeftTriangleBar":"\u29CF\u0338","NotLeftTriangle":"\u22EA","NotLeftTriangleEqual":"\u22EC","NotLess":"\u226E","NotLessEqual":"\u2270","NotLessGreater":"\u2278","NotLessLess":"\u226A\u0338","NotLessSlantEqual":"\u2A7D\u0338","NotLessTilde":"\u2274","NotNestedGreaterGreater":"\u2AA2\u0338","NotNestedLessLess":"\u2AA1\u0338","notni":"\u220C","notniva":"\u220C","notnivb":"\u22FE","notnivc":"\u22FD","NotPrecedes":"\u2280","NotPrecedesEqual":"\u2AAF\u0338","NotPrecedesSlantEqual":"\u22E0","NotReverseElement":"\u220C","NotRightTriangleBar":"\u29D0\u0338","NotRightTriangle":"\u22EB","NotRightTriangleEqual":"\u22ED","NotSquareSubset":"\u228F\u0338","NotSquareSubsetEqual":"\u22E2","NotSquareSuperset":"\u2290\u0338","NotSquareSupersetEqual":"\u22E3","NotSubset":"\u2282\u20D2","NotSubsetEqual":"\u2288","NotSucceeds":"\u2281","NotSucceedsEqual":"\u2AB0\u0338","NotSucceedsSlantEqual":"\u22E1","NotSucceedsTilde":"\u227F\u0338","NotSuperset":"\u2283\u20D2","NotSupersetEqual":"\u2289","NotTilde":"\u2241","NotTildeEqual":"\u2244","NotTildeFullEqual":"\u2247","NotTildeTilde":"\u2249","NotVerticalBar":"\u2224","nparallel":"\u2226","npar":"\u2226","nparsl":"\u2AFD\u20E5","npart":"\u2202\u0338","npolint":"\u2A14","npr":"\u2280","nprcue":"\u22E0","nprec":"\u2280","npreceq":"\u2AAF\u0338","npre":"\u2AAF\u0338","nrarrc":"\u2933\u0338","nrarr":"\u219B","nrArr":"\u21CF","nrarrw":"\u219D\u0338","nrightarrow":"\u219B","nRightarrow":"\u21CF","nrtri":"\u22EB","nrtrie":"\u22ED","nsc":"\u2281","nsccue":"\u22E1","nsce":"\u2AB0\u0338","Nscr":"\uD835\uDCA9","nscr":"\uD835\uDCC3","nshortmid":"\u2224","nshortparallel":"\u2226","nsim":"\u2241","nsime":"\u2244","nsimeq":"\u2244","nsmid":"\u2224","nspar":"\u2226","nsqsube":"\u22E2","nsqsupe":"\u22E3","nsub":"\u2284","nsubE":"\u2AC5\u0338","nsube":"\u2288","nsubset":"\u2282\u20D2","nsubseteq":"\u2288","nsubseteqq":"\u2AC5\u0338","nsucc":"\u2281","nsucceq":"\u2AB0\u0338","nsup":"\u2285","nsupE":"\u2AC6\u0338","nsupe":"\u2289","nsupset":"\u2283\u20D2","nsupseteq":"\u2289","nsupseteqq":"\u2AC6\u0338","ntgl":"\u2279","Ntilde":"\u00D1","ntilde":"\u00F1","ntlg":"\u2278","ntriangleleft":"\u22EA","ntrianglelefteq":"\u22EC","ntriangleright":"\u22EB","ntrianglerighteq":"\u22ED","Nu":"\u039D","nu":"\u03BD","num":"#","numero":"\u2116","numsp":"\u2007","nvap":"\u224D\u20D2","nvdash":"\u22AC","nvDash":"\u22AD","nVdash":"\u22AE","nVDash":"\u22AF","nvge":"\u2265\u20D2","nvgt":">\u20D2","nvHarr":"\u2904","nvinfin":"\u29DE","nvlArr":"\u2902","nvle":"\u2264\u20D2","nvlt":"<\u20D2","nvltrie":"\u22B4\u20D2","nvrArr":"\u2903","nvrtrie":"\u22B5\u20D2","nvsim":"\u223C\u20D2","nwarhk":"\u2923","nwarr":"\u2196","nwArr":"\u21D6","nwarrow":"\u2196","nwnear":"\u2927","Oacute":"\u00D3","oacute":"\u00F3","oast":"\u229B","Ocirc":"\u00D4","ocirc":"\u00F4","ocir":"\u229A","Ocy":"\u041E","ocy":"\u043E","odash":"\u229D","Odblac":"\u0150","odblac":"\u0151","odiv":"\u2A38","odot":"\u2299","odsold":"\u29BC","OElig":"\u0152","oelig":"\u0153","ofcir":"\u29BF","Ofr":"\uD835\uDD12","ofr":"\uD835\uDD2C","ogon":"\u02DB","Ograve":"\u00D2","ograve":"\u00F2","ogt":"\u29C1","ohbar":"\u29B5","ohm":"\u03A9","oint":"\u222E","olarr":"\u21BA","olcir":"\u29BE","olcross":"\u29BB","oline":"\u203E","olt":"\u29C0","Omacr":"\u014C","omacr":"\u014D","Omega":"\u03A9","omega":"\u03C9","Omicron":"\u039F","omicron":"\u03BF","omid":"\u29B6","ominus":"\u2296","Oopf":"\uD835\uDD46","oopf":"\uD835\uDD60","opar":"\u29B7","OpenCurlyDoubleQuote":"\u201C","OpenCurlyQuote":"\u2018","operp":"\u29B9","oplus":"\u2295","orarr":"\u21BB","Or":"\u2A54","or":"\u2228","ord":"\u2A5D","order":"\u2134","orderof":"\u2134","ordf":"\u00AA","ordm":"\u00BA","origof":"\u22B6","oror":"\u2A56","orslope":"\u2A57","orv":"\u2A5B","oS":"\u24C8","Oscr":"\uD835\uDCAA","oscr":"\u2134","Oslash":"\u00D8","oslash":"\u00F8","osol":"\u2298","Otilde":"\u00D5","otilde":"\u00F5","otimesas":"\u2A36","Otimes":"\u2A37","otimes":"\u2297","Ouml":"\u00D6","ouml":"\u00F6","ovbar":"\u233D","OverBar":"\u203E","OverBrace":"\u23DE","OverBracket":"\u23B4","OverParenthesis":"\u23DC","para":"\u00B6","parallel":"\u2225","par":"\u2225","parsim":"\u2AF3","parsl":"\u2AFD","part":"\u2202","PartialD":"\u2202","Pcy":"\u041F","pcy":"\u043F","percnt":"%","period":".","permil":"\u2030","perp":"\u22A5","pertenk":"\u2031","Pfr":"\uD835\uDD13","pfr":"\uD835\uDD2D","Phi":"\u03A6","phi":"\u03C6","phiv":"\u03D5","phmmat":"\u2133","phone":"\u260E","Pi":"\u03A0","pi":"\u03C0","pitchfork":"\u22D4","piv":"\u03D6","planck":"\u210F","planckh":"\u210E","plankv":"\u210F","plusacir":"\u2A23","plusb":"\u229E","pluscir":"\u2A22","plus":"+","plusdo":"\u2214","plusdu":"\u2A25","pluse":"\u2A72","PlusMinus":"\u00B1","plusmn":"\u00B1","plussim":"\u2A26","plustwo":"\u2A27","pm":"\u00B1","Poincareplane":"\u210C","pointint":"\u2A15","popf":"\uD835\uDD61","Popf":"\u2119","pound":"\u00A3","prap":"\u2AB7","Pr":"\u2ABB","pr":"\u227A","prcue":"\u227C","precapprox":"\u2AB7","prec":"\u227A","preccurlyeq":"\u227C","Precedes":"\u227A","PrecedesEqual":"\u2AAF","PrecedesSlantEqual":"\u227C","PrecedesTilde":"\u227E","preceq":"\u2AAF","precnapprox":"\u2AB9","precneqq":"\u2AB5","precnsim":"\u22E8","pre":"\u2AAF","prE":"\u2AB3","precsim":"\u227E","prime":"\u2032","Prime":"\u2033","primes":"\u2119","prnap":"\u2AB9","prnE":"\u2AB5","prnsim":"\u22E8","prod":"\u220F","Product":"\u220F","profalar":"\u232E","profline":"\u2312","profsurf":"\u2313","prop":"\u221D","Proportional":"\u221D","Proportion":"\u2237","propto":"\u221D","prsim":"\u227E","prurel":"\u22B0","Pscr":"\uD835\uDCAB","pscr":"\uD835\uDCC5","Psi":"\u03A8","psi":"\u03C8","puncsp":"\u2008","Qfr":"\uD835\uDD14","qfr":"\uD835\uDD2E","qint":"\u2A0C","qopf":"\uD835\uDD62","Qopf":"\u211A","qprime":"\u2057","Qscr":"\uD835\uDCAC","qscr":"\uD835\uDCC6","quaternions":"\u210D","quatint":"\u2A16","quest":"?","questeq":"\u225F","quot":"\"","QUOT":"\"","rAarr":"\u21DB","race":"\u223D\u0331","Racute":"\u0154","racute":"\u0155","radic":"\u221A","raemptyv":"\u29B3","rang":"\u27E9","Rang":"\u27EB","rangd":"\u2992","range":"\u29A5","rangle":"\u27E9","raquo":"\u00BB","rarrap":"\u2975","rarrb":"\u21E5","rarrbfs":"\u2920","rarrc":"\u2933","rarr":"\u2192","Rarr":"\u21A0","rArr":"\u21D2","rarrfs":"\u291E","rarrhk":"\u21AA","rarrlp":"\u21AC","rarrpl":"\u2945","rarrsim":"\u2974","Rarrtl":"\u2916","rarrtl":"\u21A3","rarrw":"\u219D","ratail":"\u291A","rAtail":"\u291C","ratio":"\u2236","rationals":"\u211A","rbarr":"\u290D","rBarr":"\u290F","RBarr":"\u2910","rbbrk":"\u2773","rbrace":"}","rbrack":"]","rbrke":"\u298C","rbrksld":"\u298E","rbrkslu":"\u2990","Rcaron":"\u0158","rcaron":"\u0159","Rcedil":"\u0156","rcedil":"\u0157","rceil":"\u2309","rcub":"}","Rcy":"\u0420","rcy":"\u0440","rdca":"\u2937","rdldhar":"\u2969","rdquo":"\u201D","rdquor":"\u201D","rdsh":"\u21B3","real":"\u211C","realine":"\u211B","realpart":"\u211C","reals":"\u211D","Re":"\u211C","rect":"\u25AD","reg":"\u00AE","REG":"\u00AE","ReverseElement":"\u220B","ReverseEquilibrium":"\u21CB","ReverseUpEquilibrium":"\u296F","rfisht":"\u297D","rfloor":"\u230B","rfr":"\uD835\uDD2F","Rfr":"\u211C","rHar":"\u2964","rhard":"\u21C1","rharu":"\u21C0","rharul":"\u296C","Rho":"\u03A1","rho":"\u03C1","rhov":"\u03F1","RightAngleBracket":"\u27E9","RightArrowBar":"\u21E5","rightarrow":"\u2192","RightArrow":"\u2192","Rightarrow":"\u21D2","RightArrowLeftArrow":"\u21C4","rightarrowtail":"\u21A3","RightCeiling":"\u2309","RightDoubleBracket":"\u27E7","RightDownTeeVector":"\u295D","RightDownVectorBar":"\u2955","RightDownVector":"\u21C2","RightFloor":"\u230B","rightharpoondown":"\u21C1","rightharpoonup":"\u21C0","rightleftarrows":"\u21C4","rightleftharpoons":"\u21CC","rightrightarrows":"\u21C9","rightsquigarrow":"\u219D","RightTeeArrow":"\u21A6","RightTee":"\u22A2","RightTeeVector":"\u295B","rightthreetimes":"\u22CC","RightTriangleBar":"\u29D0","RightTriangle":"\u22B3","RightTriangleEqual":"\u22B5","RightUpDownVector":"\u294F","RightUpTeeVector":"\u295C","RightUpVectorBar":"\u2954","RightUpVector":"\u21BE","RightVectorBar":"\u2953","RightVector":"\u21C0","ring":"\u02DA","risingdotseq":"\u2253","rlarr":"\u21C4","rlhar":"\u21CC","rlm":"\u200F","rmoustache":"\u23B1","rmoust":"\u23B1","rnmid":"\u2AEE","roang":"\u27ED","roarr":"\u21FE","robrk":"\u27E7","ropar":"\u2986","ropf":"\uD835\uDD63","Ropf":"\u211D","roplus":"\u2A2E","rotimes":"\u2A35","RoundImplies":"\u2970","rpar":")","rpargt":"\u2994","rppolint":"\u2A12","rrarr":"\u21C9","Rrightarrow":"\u21DB","rsaquo":"\u203A","rscr":"\uD835\uDCC7","Rscr":"\u211B","rsh":"\u21B1","Rsh":"\u21B1","rsqb":"]","rsquo":"\u2019","rsquor":"\u2019","rthree":"\u22CC","rtimes":"\u22CA","rtri":"\u25B9","rtrie":"\u22B5","rtrif":"\u25B8","rtriltri":"\u29CE","RuleDelayed":"\u29F4","ruluhar":"\u2968","rx":"\u211E","Sacute":"\u015A","sacute":"\u015B","sbquo":"\u201A","scap":"\u2AB8","Scaron":"\u0160","scaron":"\u0161","Sc":"\u2ABC","sc":"\u227B","sccue":"\u227D","sce":"\u2AB0","scE":"\u2AB4","Scedil":"\u015E","scedil":"\u015F","Scirc":"\u015C","scirc":"\u015D","scnap":"\u2ABA","scnE":"\u2AB6","scnsim":"\u22E9","scpolint":"\u2A13","scsim":"\u227F","Scy":"\u0421","scy":"\u0441","sdotb":"\u22A1","sdot":"\u22C5","sdote":"\u2A66","searhk":"\u2925","searr":"\u2198","seArr":"\u21D8","searrow":"\u2198","sect":"\u00A7","semi":";","seswar":"\u2929","setminus":"\u2216","setmn":"\u2216","sext":"\u2736","Sfr":"\uD835\uDD16","sfr":"\uD835\uDD30","sfrown":"\u2322","sharp":"\u266F","SHCHcy":"\u0429","shchcy":"\u0449","SHcy":"\u0428","shcy":"\u0448","ShortDownArrow":"\u2193","ShortLeftArrow":"\u2190","shortmid":"\u2223","shortparallel":"\u2225","ShortRightArrow":"\u2192","ShortUpArrow":"\u2191","shy":"\u00AD","Sigma":"\u03A3","sigma":"\u03C3","sigmaf":"\u03C2","sigmav":"\u03C2","sim":"\u223C","simdot":"\u2A6A","sime":"\u2243","simeq":"\u2243","simg":"\u2A9E","simgE":"\u2AA0","siml":"\u2A9D","simlE":"\u2A9F","simne":"\u2246","simplus":"\u2A24","simrarr":"\u2972","slarr":"\u2190","SmallCircle":"\u2218","smallsetminus":"\u2216","smashp":"\u2A33","smeparsl":"\u29E4","smid":"\u2223","smile":"\u2323","smt":"\u2AAA","smte":"\u2AAC","smtes":"\u2AAC\uFE00","SOFTcy":"\u042C","softcy":"\u044C","solbar":"\u233F","solb":"\u29C4","sol":"/","Sopf":"\uD835\uDD4A","sopf":"\uD835\uDD64","spades":"\u2660","spadesuit":"\u2660","spar":"\u2225","sqcap":"\u2293","sqcaps":"\u2293\uFE00","sqcup":"\u2294","sqcups":"\u2294\uFE00","Sqrt":"\u221A","sqsub":"\u228F","sqsube":"\u2291","sqsubset":"\u228F","sqsubseteq":"\u2291","sqsup":"\u2290","sqsupe":"\u2292","sqsupset":"\u2290","sqsupseteq":"\u2292","square":"\u25A1","Square":"\u25A1","SquareIntersection":"\u2293","SquareSubset":"\u228F","SquareSubsetEqual":"\u2291","SquareSuperset":"\u2290","SquareSupersetEqual":"\u2292","SquareUnion":"\u2294","squarf":"\u25AA","squ":"\u25A1","squf":"\u25AA","srarr":"\u2192","Sscr":"\uD835\uDCAE","sscr":"\uD835\uDCC8","ssetmn":"\u2216","ssmile":"\u2323","sstarf":"\u22C6","Star":"\u22C6","star":"\u2606","starf":"\u2605","straightepsilon":"\u03F5","straightphi":"\u03D5","strns":"\u00AF","sub":"\u2282","Sub":"\u22D0","subdot":"\u2ABD","subE":"\u2AC5","sube":"\u2286","subedot":"\u2AC3","submult":"\u2AC1","subnE":"\u2ACB","subne":"\u228A","subplus":"\u2ABF","subrarr":"\u2979","subset":"\u2282","Subset":"\u22D0","subseteq":"\u2286","subseteqq":"\u2AC5","SubsetEqual":"\u2286","subsetneq":"\u228A","subsetneqq":"\u2ACB","subsim":"\u2AC7","subsub":"\u2AD5","subsup":"\u2AD3","succapprox":"\u2AB8","succ":"\u227B","succcurlyeq":"\u227D","Succeeds":"\u227B","SucceedsEqual":"\u2AB0","SucceedsSlantEqual":"\u227D","SucceedsTilde":"\u227F","succeq":"\u2AB0","succnapprox":"\u2ABA","succneqq":"\u2AB6","succnsim":"\u22E9","succsim":"\u227F","SuchThat":"\u220B","sum":"\u2211","Sum":"\u2211","sung":"\u266A","sup1":"\u00B9","sup2":"\u00B2","sup3":"\u00B3","sup":"\u2283","Sup":"\u22D1","supdot":"\u2ABE","supdsub":"\u2AD8","supE":"\u2AC6","supe":"\u2287","supedot":"\u2AC4","Superset":"\u2283","SupersetEqual":"\u2287","suphsol":"\u27C9","suphsub":"\u2AD7","suplarr":"\u297B","supmult":"\u2AC2","supnE":"\u2ACC","supne":"\u228B","supplus":"\u2AC0","supset":"\u2283","Supset":"\u22D1","supseteq":"\u2287","supseteqq":"\u2AC6","supsetneq":"\u228B","supsetneqq":"\u2ACC","supsim":"\u2AC8","supsub":"\u2AD4","supsup":"\u2AD6","swarhk":"\u2926","swarr":"\u2199","swArr":"\u21D9","swarrow":"\u2199","swnwar":"\u292A","szlig":"\u00DF","Tab":"\t","target":"\u2316","Tau":"\u03A4","tau":"\u03C4","tbrk":"\u23B4","Tcaron":"\u0164","tcaron":"\u0165","Tcedil":"\u0162","tcedil":"\u0163","Tcy":"\u0422","tcy":"\u0442","tdot":"\u20DB","telrec":"\u2315","Tfr":"\uD835\uDD17","tfr":"\uD835\uDD31","there4":"\u2234","therefore":"\u2234","Therefore":"\u2234","Theta":"\u0398","theta":"\u03B8","thetasym":"\u03D1","thetav":"\u03D1","thickapprox":"\u2248","thicksim":"\u223C","ThickSpace":"\u205F\u200A","ThinSpace":"\u2009","thinsp":"\u2009","thkap":"\u2248","thksim":"\u223C","THORN":"\u00DE","thorn":"\u00FE","tilde":"\u02DC","Tilde":"\u223C","TildeEqual":"\u2243","TildeFullEqual":"\u2245","TildeTilde":"\u2248","timesbar":"\u2A31","timesb":"\u22A0","times":"\u00D7","timesd":"\u2A30","tint":"\u222D","toea":"\u2928","topbot":"\u2336","topcir":"\u2AF1","top":"\u22A4","Topf":"\uD835\uDD4B","topf":"\uD835\uDD65","topfork":"\u2ADA","tosa":"\u2929","tprime":"\u2034","trade":"\u2122","TRADE":"\u2122","triangle":"\u25B5","triangledown":"\u25BF","triangleleft":"\u25C3","trianglelefteq":"\u22B4","triangleq":"\u225C","triangleright":"\u25B9","trianglerighteq":"\u22B5","tridot":"\u25EC","trie":"\u225C","triminus":"\u2A3A","TripleDot":"\u20DB","triplus":"\u2A39","trisb":"\u29CD","tritime":"\u2A3B","trpezium":"\u23E2","Tscr":"\uD835\uDCAF","tscr":"\uD835\uDCC9","TScy":"\u0426","tscy":"\u0446","TSHcy":"\u040B","tshcy":"\u045B","Tstrok":"\u0166","tstrok":"\u0167","twixt":"\u226C","twoheadleftarrow":"\u219E","twoheadrightarrow":"\u21A0","Uacute":"\u00DA","uacute":"\u00FA","uarr":"\u2191","Uarr":"\u219F","uArr":"\u21D1","Uarrocir":"\u2949","Ubrcy":"\u040E","ubrcy":"\u045E","Ubreve":"\u016C","ubreve":"\u016D","Ucirc":"\u00DB","ucirc":"\u00FB","Ucy":"\u0423","ucy":"\u0443","udarr":"\u21C5","Udblac":"\u0170","udblac":"\u0171","udhar":"\u296E","ufisht":"\u297E","Ufr":"\uD835\uDD18","ufr":"\uD835\uDD32","Ugrave":"\u00D9","ugrave":"\u00F9","uHar":"\u2963","uharl":"\u21BF","uharr":"\u21BE","uhblk":"\u2580","ulcorn":"\u231C","ulcorner":"\u231C","ulcrop":"\u230F","ultri":"\u25F8","Umacr":"\u016A","umacr":"\u016B","uml":"\u00A8","UnderBar":"_","UnderBrace":"\u23DF","UnderBracket":"\u23B5","UnderParenthesis":"\u23DD","Union":"\u22C3","UnionPlus":"\u228E","Uogon":"\u0172","uogon":"\u0173","Uopf":"\uD835\uDD4C","uopf":"\uD835\uDD66","UpArrowBar":"\u2912","uparrow":"\u2191","UpArrow":"\u2191","Uparrow":"\u21D1","UpArrowDownArrow":"\u21C5","updownarrow":"\u2195","UpDownArrow":"\u2195","Updownarrow":"\u21D5","UpEquilibrium":"\u296E","upharpoonleft":"\u21BF","upharpoonright":"\u21BE","uplus":"\u228E","UpperLeftArrow":"\u2196","UpperRightArrow":"\u2197","upsi":"\u03C5","Upsi":"\u03D2","upsih":"\u03D2","Upsilon":"\u03A5","upsilon":"\u03C5","UpTeeArrow":"\u21A5","UpTee":"\u22A5","upuparrows":"\u21C8","urcorn":"\u231D","urcorner":"\u231D","urcrop":"\u230E","Uring":"\u016E","uring":"\u016F","urtri":"\u25F9","Uscr":"\uD835\uDCB0","uscr":"\uD835\uDCCA","utdot":"\u22F0","Utilde":"\u0168","utilde":"\u0169","utri":"\u25B5","utrif":"\u25B4","uuarr":"\u21C8","Uuml":"\u00DC","uuml":"\u00FC","uwangle":"\u29A7","vangrt":"\u299C","varepsilon":"\u03F5","varkappa":"\u03F0","varnothing":"\u2205","varphi":"\u03D5","varpi":"\u03D6","varpropto":"\u221D","varr":"\u2195","vArr":"\u21D5","varrho":"\u03F1","varsigma":"\u03C2","varsubsetneq":"\u228A\uFE00","varsubsetneqq":"\u2ACB\uFE00","varsupsetneq":"\u228B\uFE00","varsupsetneqq":"\u2ACC\uFE00","vartheta":"\u03D1","vartriangleleft":"\u22B2","vartriangleright":"\u22B3","vBar":"\u2AE8","Vbar":"\u2AEB","vBarv":"\u2AE9","Vcy":"\u0412","vcy":"\u0432","vdash":"\u22A2","vDash":"\u22A8","Vdash":"\u22A9","VDash":"\u22AB","Vdashl":"\u2AE6","veebar":"\u22BB","vee":"\u2228","Vee":"\u22C1","veeeq":"\u225A","vellip":"\u22EE","verbar":"|","Verbar":"\u2016","vert":"|","Vert":"\u2016","VerticalBar":"\u2223","VerticalLine":"|","VerticalSeparator":"\u2758","VerticalTilde":"\u2240","VeryThinSpace":"\u200A","Vfr":"\uD835\uDD19","vfr":"\uD835\uDD33","vltri":"\u22B2","vnsub":"\u2282\u20D2","vnsup":"\u2283\u20D2","Vopf":"\uD835\uDD4D","vopf":"\uD835\uDD67","vprop":"\u221D","vrtri":"\u22B3","Vscr":"\uD835\uDCB1","vscr":"\uD835\uDCCB","vsubnE":"\u2ACB\uFE00","vsubne":"\u228A\uFE00","vsupnE":"\u2ACC\uFE00","vsupne":"\u228B\uFE00","Vvdash":"\u22AA","vzigzag":"\u299A","Wcirc":"\u0174","wcirc":"\u0175","wedbar":"\u2A5F","wedge":"\u2227","Wedge":"\u22C0","wedgeq":"\u2259","weierp":"\u2118","Wfr":"\uD835\uDD1A","wfr":"\uD835\uDD34","Wopf":"\uD835\uDD4E","wopf":"\uD835\uDD68","wp":"\u2118","wr":"\u2240","wreath":"\u2240","Wscr":"\uD835\uDCB2","wscr":"\uD835\uDCCC","xcap":"\u22C2","xcirc":"\u25EF","xcup":"\u22C3","xdtri":"\u25BD","Xfr":"\uD835\uDD1B","xfr":"\uD835\uDD35","xharr":"\u27F7","xhArr":"\u27FA","Xi":"\u039E","xi":"\u03BE","xlarr":"\u27F5","xlArr":"\u27F8","xmap":"\u27FC","xnis":"\u22FB","xodot":"\u2A00","Xopf":"\uD835\uDD4F","xopf":"\uD835\uDD69","xoplus":"\u2A01","xotime":"\u2A02","xrarr":"\u27F6","xrArr":"\u27F9","Xscr":"\uD835\uDCB3","xscr":"\uD835\uDCCD","xsqcup":"\u2A06","xuplus":"\u2A04","xutri":"\u25B3","xvee":"\u22C1","xwedge":"\u22C0","Yacute":"\u00DD","yacute":"\u00FD","YAcy":"\u042F","yacy":"\u044F","Ycirc":"\u0176","ycirc":"\u0177","Ycy":"\u042B","ycy":"\u044B","yen":"\u00A5","Yfr":"\uD835\uDD1C","yfr":"\uD835\uDD36","YIcy":"\u0407","yicy":"\u0457","Yopf":"\uD835\uDD50","yopf":"\uD835\uDD6A","Yscr":"\uD835\uDCB4","yscr":"\uD835\uDCCE","YUcy":"\u042E","yucy":"\u044E","yuml":"\u00FF","Yuml":"\u0178","Zacute":"\u0179","zacute":"\u017A","Zcaron":"\u017D","zcaron":"\u017E","Zcy":"\u0417","zcy":"\u0437","Zdot":"\u017B","zdot":"\u017C","zeetrf":"\u2128","ZeroWidthSpace":"\u200B","Zeta":"\u0396","zeta":"\u03B6","zfr":"\uD835\uDD37","Zfr":"\u2128","ZHcy":"\u0416","zhcy":"\u0436","zigrarr":"\u21DD","zopf":"\uD835\uDD6B","Zopf":"\u2124","Zscr":"\uD835\uDCB5","zscr":"\uD835\uDCCF","zwj":"\u200D","zwnj":"\u200C"}
 },{}],54:[function(require,module,exports){
-module.exports={"Aacute":"\u00C1","aacute":"\u00E1","Acirc":"\u00C2","acirc":"\u00E2","acute":"\u00B4","AElig":"\u00C6","aelig":"\u00E6","Agrave":"\u00C0","agrave":"\u00E0","amp":"&","AMP":"&","Aring":"\u00C5","aring":"\u00E5","Atilde":"\u00C3","atilde":"\u00E3","Auml":"\u00C4","auml":"\u00E4","brvbar":"\u00A6","Ccedil":"\u00C7","ccedil":"\u00E7","cedil":"\u00B8","cent":"\u00A2","copy":"\u00A9","COPY":"\u00A9","curren":"\u00A4","deg":"\u00B0","divide":"\u00F7","Eacute":"\u00C9","eacute":"\u00E9","Ecirc":"\u00CA","ecirc":"\u00EA","Egrave":"\u00C8","egrave":"\u00E8","ETH":"\u00D0","eth":"\u00F0","Euml":"\u00CB","euml":"\u00EB","frac12":"\u00BD","frac14":"\u00BC","frac34":"\u00BE","gt":">","GT":">","Iacute":"\u00CD","iacute":"\u00ED","Icirc":"\u00CE","icirc":"\u00EE","iexcl":"\u00A1","Igrave":"\u00CC","igrave":"\u00EC","iquest":"\u00BF","Iuml":"\u00CF","iuml":"\u00EF","laquo":"\u00AB","lt":"<","LT":"<","macr":"\u00AF","micro":"\u00B5","middot":"\u00B7","nbsp":"\u00A0","not":"\u00AC","Ntilde":"\u00D1","ntilde":"\u00F1","Oacute":"\u00D3","oacute":"\u00F3","Ocirc":"\u00D4","ocirc":"\u00F4","Ograve":"\u00D2","ograve":"\u00F2","ordf":"\u00AA","ordm":"\u00BA","Oslash":"\u00D8","oslash":"\u00F8","Otilde":"\u00D5","otilde":"\u00F5","Ouml":"\u00D6","ouml":"\u00F6","para":"\u00B6","plusmn":"\u00B1","pound":"\u00A3","quot":"\"","QUOT":"\"","raquo":"\u00BB","reg":"\u00AE","REG":"\u00AE","sect":"\u00A7","shy":"\u00AD","sup1":"\u00B9","sup2":"\u00B2","sup3":"\u00B3","szlig":"\u00DF","THORN":"\u00DE","thorn":"\u00FE","times":"\u00D7","Uacute":"\u00DA","uacute":"\u00FA","Ucirc":"\u00DB","ucirc":"\u00FB","Ugrave":"\u00D9","ugrave":"\u00F9","uml":"\u00A8","Uuml":"\u00DC","uuml":"\u00FC","Yacute":"\u00DD","yacute":"\u00FD","yen":"\u00A5","yuml":"\u00FF"}
+module.exports={"Aacute":"\u00C1","aacute":"\u00E1","Abreve":"\u0102","abreve":"\u0103","ac":"\u223E","acd":"\u223F","acE":"\u223E\u0333","Acirc":"\u00C2","acirc":"\u00E2","acute":"\u00B4","Acy":"\u0410","acy":"\u0430","AElig":"\u00C6","aelig":"\u00E6","af":"\u2061","Afr":"\uD835\uDD04","afr":"\uD835\uDD1E","Agrave":"\u00C0","agrave":"\u00E0","alefsym":"\u2135","aleph":"\u2135","Alpha":"\u0391","alpha":"\u03B1","Amacr":"\u0100","amacr":"\u0101","amalg":"\u2A3F","amp":"&","AMP":"&","andand":"\u2A55","And":"\u2A53","and":"\u2227","andd":"\u2A5C","andslope":"\u2A58","andv":"\u2A5A","ang":"\u2220","ange":"\u29A4","angle":"\u2220","angmsdaa":"\u29A8","angmsdab":"\u29A9","angmsdac":"\u29AA","angmsdad":"\u29AB","angmsdae":"\u29AC","angmsdaf":"\u29AD","angmsdag":"\u29AE","angmsdah":"\u29AF","angmsd":"\u2221","angrt":"\u221F","angrtvb":"\u22BE","angrtvbd":"\u299D","angsph":"\u2222","angst":"\u00C5","angzarr":"\u237C","Aogon":"\u0104","aogon":"\u0105","Aopf":"\uD835\uDD38","aopf":"\uD835\uDD52","apacir":"\u2A6F","ap":"\u2248","apE":"\u2A70","ape":"\u224A","apid":"\u224B","apos":"'","ApplyFunction":"\u2061","approx":"\u2248","approxeq":"\u224A","Aring":"\u00C5","aring":"\u00E5","Ascr":"\uD835\uDC9C","ascr":"\uD835\uDCB6","Assign":"\u2254","ast":"*","asymp":"\u2248","asympeq":"\u224D","Atilde":"\u00C3","atilde":"\u00E3","Auml":"\u00C4","auml":"\u00E4","awconint":"\u2233","awint":"\u2A11","backcong":"\u224C","backepsilon":"\u03F6","backprime":"\u2035","backsim":"\u223D","backsimeq":"\u22CD","Backslash":"\u2216","Barv":"\u2AE7","barvee":"\u22BD","barwed":"\u2305","Barwed":"\u2306","barwedge":"\u2305","bbrk":"\u23B5","bbrktbrk":"\u23B6","bcong":"\u224C","Bcy":"\u0411","bcy":"\u0431","bdquo":"\u201E","becaus":"\u2235","because":"\u2235","Because":"\u2235","bemptyv":"\u29B0","bepsi":"\u03F6","bernou":"\u212C","Bernoullis":"\u212C","Beta":"\u0392","beta":"\u03B2","beth":"\u2136","between":"\u226C","Bfr":"\uD835\uDD05","bfr":"\uD835\uDD1F","bigcap":"\u22C2","bigcirc":"\u25EF","bigcup":"\u22C3","bigodot":"\u2A00","bigoplus":"\u2A01","bigotimes":"\u2A02","bigsqcup":"\u2A06","bigstar":"\u2605","bigtriangledown":"\u25BD","bigtriangleup":"\u25B3","biguplus":"\u2A04","bigvee":"\u22C1","bigwedge":"\u22C0","bkarow":"\u290D","blacklozenge":"\u29EB","blacksquare":"\u25AA","blacktriangle":"\u25B4","blacktriangledown":"\u25BE","blacktriangleleft":"\u25C2","blacktriangleright":"\u25B8","blank":"\u2423","blk12":"\u2592","blk14":"\u2591","blk34":"\u2593","block":"\u2588","bne":"=\u20E5","bnequiv":"\u2261\u20E5","bNot":"\u2AED","bnot":"\u2310","Bopf":"\uD835\uDD39","bopf":"\uD835\uDD53","bot":"\u22A5","bottom":"\u22A5","bowtie":"\u22C8","boxbox":"\u29C9","boxdl":"\u2510","boxdL":"\u2555","boxDl":"\u2556","boxDL":"\u2557","boxdr":"\u250C","boxdR":"\u2552","boxDr":"\u2553","boxDR":"\u2554","boxh":"\u2500","boxH":"\u2550","boxhd":"\u252C","boxHd":"\u2564","boxhD":"\u2565","boxHD":"\u2566","boxhu":"\u2534","boxHu":"\u2567","boxhU":"\u2568","boxHU":"\u2569","boxminus":"\u229F","boxplus":"\u229E","boxtimes":"\u22A0","boxul":"\u2518","boxuL":"\u255B","boxUl":"\u255C","boxUL":"\u255D","boxur":"\u2514","boxuR":"\u2558","boxUr":"\u2559","boxUR":"\u255A","boxv":"\u2502","boxV":"\u2551","boxvh":"\u253C","boxvH":"\u256A","boxVh":"\u256B","boxVH":"\u256C","boxvl":"\u2524","boxvL":"\u2561","boxVl":"\u2562","boxVL":"\u2563","boxvr":"\u251C","boxvR":"\u255E","boxVr":"\u255F","boxVR":"\u2560","bprime":"\u2035","breve":"\u02D8","Breve":"\u02D8","brvbar":"\u00A6","bscr":"\uD835\uDCB7","Bscr":"\u212C","bsemi":"\u204F","bsim":"\u223D","bsime":"\u22CD","bsolb":"\u29C5","bsol":"\\","bsolhsub":"\u27C8","bull":"\u2022","bullet":"\u2022","bump":"\u224E","bumpE":"\u2AAE","bumpe":"\u224F","Bumpeq":"\u224E","bumpeq":"\u224F","Cacute":"\u0106","cacute":"\u0107","capand":"\u2A44","capbrcup":"\u2A49","capcap":"\u2A4B","cap":"\u2229","Cap":"\u22D2","capcup":"\u2A47","capdot":"\u2A40","CapitalDifferentialD":"\u2145","caps":"\u2229\uFE00","caret":"\u2041","caron":"\u02C7","Cayleys":"\u212D","ccaps":"\u2A4D","Ccaron":"\u010C","ccaron":"\u010D","Ccedil":"\u00C7","ccedil":"\u00E7","Ccirc":"\u0108","ccirc":"\u0109","Cconint":"\u2230","ccups":"\u2A4C","ccupssm":"\u2A50","Cdot":"\u010A","cdot":"\u010B","cedil":"\u00B8","Cedilla":"\u00B8","cemptyv":"\u29B2","cent":"\u00A2","centerdot":"\u00B7","CenterDot":"\u00B7","cfr":"\uD835\uDD20","Cfr":"\u212D","CHcy":"\u0427","chcy":"\u0447","check":"\u2713","checkmark":"\u2713","Chi":"\u03A7","chi":"\u03C7","circ":"\u02C6","circeq":"\u2257","circlearrowleft":"\u21BA","circlearrowright":"\u21BB","circledast":"\u229B","circledcirc":"\u229A","circleddash":"\u229D","CircleDot":"\u2299","circledR":"\u00AE","circledS":"\u24C8","CircleMinus":"\u2296","CirclePlus":"\u2295","CircleTimes":"\u2297","cir":"\u25CB","cirE":"\u29C3","cire":"\u2257","cirfnint":"\u2A10","cirmid":"\u2AEF","cirscir":"\u29C2","ClockwiseContourIntegral":"\u2232","CloseCurlyDoubleQuote":"\u201D","CloseCurlyQuote":"\u2019","clubs":"\u2663","clubsuit":"\u2663","colon":":","Colon":"\u2237","Colone":"\u2A74","colone":"\u2254","coloneq":"\u2254","comma":",","commat":"@","comp":"\u2201","compfn":"\u2218","complement":"\u2201","complexes":"\u2102","cong":"\u2245","congdot":"\u2A6D","Congruent":"\u2261","conint":"\u222E","Conint":"\u222F","ContourIntegral":"\u222E","copf":"\uD835\uDD54","Copf":"\u2102","coprod":"\u2210","Coproduct":"\u2210","copy":"\u00A9","COPY":"\u00A9","copysr":"\u2117","CounterClockwiseContourIntegral":"\u2233","crarr":"\u21B5","cross":"\u2717","Cross":"\u2A2F","Cscr":"\uD835\uDC9E","cscr":"\uD835\uDCB8","csub":"\u2ACF","csube":"\u2AD1","csup":"\u2AD0","csupe":"\u2AD2","ctdot":"\u22EF","cudarrl":"\u2938","cudarrr":"\u2935","cuepr":"\u22DE","cuesc":"\u22DF","cularr":"\u21B6","cularrp":"\u293D","cupbrcap":"\u2A48","cupcap":"\u2A46","CupCap":"\u224D","cup":"\u222A","Cup":"\u22D3","cupcup":"\u2A4A","cupdot":"\u228D","cupor":"\u2A45","cups":"\u222A\uFE00","curarr":"\u21B7","curarrm":"\u293C","curlyeqprec":"\u22DE","curlyeqsucc":"\u22DF","curlyvee":"\u22CE","curlywedge":"\u22CF","curren":"\u00A4","curvearrowleft":"\u21B6","curvearrowright":"\u21B7","cuvee":"\u22CE","cuwed":"\u22CF","cwconint":"\u2232","cwint":"\u2231","cylcty":"\u232D","dagger":"\u2020","Dagger":"\u2021","daleth":"\u2138","darr":"\u2193","Darr":"\u21A1","dArr":"\u21D3","dash":"\u2010","Dashv":"\u2AE4","dashv":"\u22A3","dbkarow":"\u290F","dblac":"\u02DD","Dcaron":"\u010E","dcaron":"\u010F","Dcy":"\u0414","dcy":"\u0434","ddagger":"\u2021","ddarr":"\u21CA","DD":"\u2145","dd":"\u2146","DDotrahd":"\u2911","ddotseq":"\u2A77","deg":"\u00B0","Del":"\u2207","Delta":"\u0394","delta":"\u03B4","demptyv":"\u29B1","dfisht":"\u297F","Dfr":"\uD835\uDD07","dfr":"\uD835\uDD21","dHar":"\u2965","dharl":"\u21C3","dharr":"\u21C2","DiacriticalAcute":"\u00B4","DiacriticalDot":"\u02D9","DiacriticalDoubleAcute":"\u02DD","DiacriticalGrave":"`","DiacriticalTilde":"\u02DC","diam":"\u22C4","diamond":"\u22C4","Diamond":"\u22C4","diamondsuit":"\u2666","diams":"\u2666","die":"\u00A8","DifferentialD":"\u2146","digamma":"\u03DD","disin":"\u22F2","div":"\u00F7","divide":"\u00F7","divideontimes":"\u22C7","divonx":"\u22C7","DJcy":"\u0402","djcy":"\u0452","dlcorn":"\u231E","dlcrop":"\u230D","dollar":"$","Dopf":"\uD835\uDD3B","dopf":"\uD835\uDD55","Dot":"\u00A8","dot":"\u02D9","DotDot":"\u20DC","doteq":"\u2250","doteqdot":"\u2251","DotEqual":"\u2250","dotminus":"\u2238","dotplus":"\u2214","dotsquare":"\u22A1","doublebarwedge":"\u2306","DoubleContourIntegral":"\u222F","DoubleDot":"\u00A8","DoubleDownArrow":"\u21D3","DoubleLeftArrow":"\u21D0","DoubleLeftRightArrow":"\u21D4","DoubleLeftTee":"\u2AE4","DoubleLongLeftArrow":"\u27F8","DoubleLongLeftRightArrow":"\u27FA","DoubleLongRightArrow":"\u27F9","DoubleRightArrow":"\u21D2","DoubleRightTee":"\u22A8","DoubleUpArrow":"\u21D1","DoubleUpDownArrow":"\u21D5","DoubleVerticalBar":"\u2225","DownArrowBar":"\u2913","downarrow":"\u2193","DownArrow":"\u2193","Downarrow":"\u21D3","DownArrowUpArrow":"\u21F5","DownBreve":"\u0311","downdownarrows":"\u21CA","downharpoonleft":"\u21C3","downharpoonright":"\u21C2","DownLeftRightVector":"\u2950","DownLeftTeeVector":"\u295E","DownLeftVectorBar":"\u2956","DownLeftVector":"\u21BD","DownRightTeeVector":"\u295F","DownRightVectorBar":"\u2957","DownRightVector":"\u21C1","DownTeeArrow":"\u21A7","DownTee":"\u22A4","drbkarow":"\u2910","drcorn":"\u231F","drcrop":"\u230C","Dscr":"\uD835\uDC9F","dscr":"\uD835\uDCB9","DScy":"\u0405","dscy":"\u0455","dsol":"\u29F6","Dstrok":"\u0110","dstrok":"\u0111","dtdot":"\u22F1","dtri":"\u25BF","dtrif":"\u25BE","duarr":"\u21F5","duhar":"\u296F","dwangle":"\u29A6","DZcy":"\u040F","dzcy":"\u045F","dzigrarr":"\u27FF","Eacute":"\u00C9","eacute":"\u00E9","easter":"\u2A6E","Ecaron":"\u011A","ecaron":"\u011B","Ecirc":"\u00CA","ecirc":"\u00EA","ecir":"\u2256","ecolon":"\u2255","Ecy":"\u042D","ecy":"\u044D","eDDot":"\u2A77","Edot":"\u0116","edot":"\u0117","eDot":"\u2251","ee":"\u2147","efDot":"\u2252","Efr":"\uD835\uDD08","efr":"\uD835\uDD22","eg":"\u2A9A","Egrave":"\u00C8","egrave":"\u00E8","egs":"\u2A96","egsdot":"\u2A98","el":"\u2A99","Element":"\u2208","elinters":"\u23E7","ell":"\u2113","els":"\u2A95","elsdot":"\u2A97","Emacr":"\u0112","emacr":"\u0113","empty":"\u2205","emptyset":"\u2205","EmptySmallSquare":"\u25FB","emptyv":"\u2205","EmptyVerySmallSquare":"\u25AB","emsp13":"\u2004","emsp14":"\u2005","emsp":"\u2003","ENG":"\u014A","eng":"\u014B","ensp":"\u2002","Eogon":"\u0118","eogon":"\u0119","Eopf":"\uD835\uDD3C","eopf":"\uD835\uDD56","epar":"\u22D5","eparsl":"\u29E3","eplus":"\u2A71","epsi":"\u03B5","Epsilon":"\u0395","epsilon":"\u03B5","epsiv":"\u03F5","eqcirc":"\u2256","eqcolon":"\u2255","eqsim":"\u2242","eqslantgtr":"\u2A96","eqslantless":"\u2A95","Equal":"\u2A75","equals":"=","EqualTilde":"\u2242","equest":"\u225F","Equilibrium":"\u21CC","equiv":"\u2261","equivDD":"\u2A78","eqvparsl":"\u29E5","erarr":"\u2971","erDot":"\u2253","escr":"\u212F","Escr":"\u2130","esdot":"\u2250","Esim":"\u2A73","esim":"\u2242","Eta":"\u0397","eta":"\u03B7","ETH":"\u00D0","eth":"\u00F0","Euml":"\u00CB","euml":"\u00EB","euro":"\u20AC","excl":"!","exist":"\u2203","Exists":"\u2203","expectation":"\u2130","exponentiale":"\u2147","ExponentialE":"\u2147","fallingdotseq":"\u2252","Fcy":"\u0424","fcy":"\u0444","female":"\u2640","ffilig":"\uFB03","fflig":"\uFB00","ffllig":"\uFB04","Ffr":"\uD835\uDD09","ffr":"\uD835\uDD23","filig":"\uFB01","FilledSmallSquare":"\u25FC","FilledVerySmallSquare":"\u25AA","fjlig":"fj","flat":"\u266D","fllig":"\uFB02","fltns":"\u25B1","fnof":"\u0192","Fopf":"\uD835\uDD3D","fopf":"\uD835\uDD57","forall":"\u2200","ForAll":"\u2200","fork":"\u22D4","forkv":"\u2AD9","Fouriertrf":"\u2131","fpartint":"\u2A0D","frac12":"\u00BD","frac13":"\u2153","frac14":"\u00BC","frac15":"\u2155","frac16":"\u2159","frac18":"\u215B","frac23":"\u2154","frac25":"\u2156","frac34":"\u00BE","frac35":"\u2157","frac38":"\u215C","frac45":"\u2158","frac56":"\u215A","frac58":"\u215D","frac78":"\u215E","frasl":"\u2044","frown":"\u2322","fscr":"\uD835\uDCBB","Fscr":"\u2131","gacute":"\u01F5","Gamma":"\u0393","gamma":"\u03B3","Gammad":"\u03DC","gammad":"\u03DD","gap":"\u2A86","Gbreve":"\u011E","gbreve":"\u011F","Gcedil":"\u0122","Gcirc":"\u011C","gcirc":"\u011D","Gcy":"\u0413","gcy":"\u0433","Gdot":"\u0120","gdot":"\u0121","ge":"\u2265","gE":"\u2267","gEl":"\u2A8C","gel":"\u22DB","geq":"\u2265","geqq":"\u2267","geqslant":"\u2A7E","gescc":"\u2AA9","ges":"\u2A7E","gesdot":"\u2A80","gesdoto":"\u2A82","gesdotol":"\u2A84","gesl":"\u22DB\uFE00","gesles":"\u2A94","Gfr":"\uD835\uDD0A","gfr":"\uD835\uDD24","gg":"\u226B","Gg":"\u22D9","ggg":"\u22D9","gimel":"\u2137","GJcy":"\u0403","gjcy":"\u0453","gla":"\u2AA5","gl":"\u2277","glE":"\u2A92","glj":"\u2AA4","gnap":"\u2A8A","gnapprox":"\u2A8A","gne":"\u2A88","gnE":"\u2269","gneq":"\u2A88","gneqq":"\u2269","gnsim":"\u22E7","Gopf":"\uD835\uDD3E","gopf":"\uD835\uDD58","grave":"`","GreaterEqual":"\u2265","GreaterEqualLess":"\u22DB","GreaterFullEqual":"\u2267","GreaterGreater":"\u2AA2","GreaterLess":"\u2277","GreaterSlantEqual":"\u2A7E","GreaterTilde":"\u2273","Gscr":"\uD835\uDCA2","gscr":"\u210A","gsim":"\u2273","gsime":"\u2A8E","gsiml":"\u2A90","gtcc":"\u2AA7","gtcir":"\u2A7A","gt":">","GT":">","Gt":"\u226B","gtdot":"\u22D7","gtlPar":"\u2995","gtquest":"\u2A7C","gtrapprox":"\u2A86","gtrarr":"\u2978","gtrdot":"\u22D7","gtreqless":"\u22DB","gtreqqless":"\u2A8C","gtrless":"\u2277","gtrsim":"\u2273","gvertneqq":"\u2269\uFE00","gvnE":"\u2269\uFE00","Hacek":"\u02C7","hairsp":"\u200A","half":"\u00BD","hamilt":"\u210B","HARDcy":"\u042A","hardcy":"\u044A","harrcir":"\u2948","harr":"\u2194","hArr":"\u21D4","harrw":"\u21AD","Hat":"^","hbar":"\u210F","Hcirc":"\u0124","hcirc":"\u0125","hearts":"\u2665","heartsuit":"\u2665","hellip":"\u2026","hercon":"\u22B9","hfr":"\uD835\uDD25","Hfr":"\u210C","HilbertSpace":"\u210B","hksearow":"\u2925","hkswarow":"\u2926","hoarr":"\u21FF","homtht":"\u223B","hookleftarrow":"\u21A9","hookrightarrow":"\u21AA","hopf":"\uD835\uDD59","Hopf":"\u210D","horbar":"\u2015","HorizontalLine":"\u2500","hscr":"\uD835\uDCBD","Hscr":"\u210B","hslash":"\u210F","Hstrok":"\u0126","hstrok":"\u0127","HumpDownHump":"\u224E","HumpEqual":"\u224F","hybull":"\u2043","hyphen":"\u2010","Iacute":"\u00CD","iacute":"\u00ED","ic":"\u2063","Icirc":"\u00CE","icirc":"\u00EE","Icy":"\u0418","icy":"\u0438","Idot":"\u0130","IEcy":"\u0415","iecy":"\u0435","iexcl":"\u00A1","iff":"\u21D4","ifr":"\uD835\uDD26","Ifr":"\u2111","Igrave":"\u00CC","igrave":"\u00EC","ii":"\u2148","iiiint":"\u2A0C","iiint":"\u222D","iinfin":"\u29DC","iiota":"\u2129","IJlig":"\u0132","ijlig":"\u0133","Imacr":"\u012A","imacr":"\u012B","image":"\u2111","ImaginaryI":"\u2148","imagline":"\u2110","imagpart":"\u2111","imath":"\u0131","Im":"\u2111","imof":"\u22B7","imped":"\u01B5","Implies":"\u21D2","incare":"\u2105","in":"\u2208","infin":"\u221E","infintie":"\u29DD","inodot":"\u0131","intcal":"\u22BA","int":"\u222B","Int":"\u222C","integers":"\u2124","Integral":"\u222B","intercal":"\u22BA","Intersection":"\u22C2","intlarhk":"\u2A17","intprod":"\u2A3C","InvisibleComma":"\u2063","InvisibleTimes":"\u2062","IOcy":"\u0401","iocy":"\u0451","Iogon":"\u012E","iogon":"\u012F","Iopf":"\uD835\uDD40","iopf":"\uD835\uDD5A","Iota":"\u0399","iota":"\u03B9","iprod":"\u2A3C","iquest":"\u00BF","iscr":"\uD835\uDCBE","Iscr":"\u2110","isin":"\u2208","isindot":"\u22F5","isinE":"\u22F9","isins":"\u22F4","isinsv":"\u22F3","isinv":"\u2208","it":"\u2062","Itilde":"\u0128","itilde":"\u0129","Iukcy":"\u0406","iukcy":"\u0456","Iuml":"\u00CF","iuml":"\u00EF","Jcirc":"\u0134","jcirc":"\u0135","Jcy":"\u0419","jcy":"\u0439","Jfr":"\uD835\uDD0D","jfr":"\uD835\uDD27","jmath":"\u0237","Jopf":"\uD835\uDD41","jopf":"\uD835\uDD5B","Jscr":"\uD835\uDCA5","jscr":"\uD835\uDCBF","Jsercy":"\u0408","jsercy":"\u0458","Jukcy":"\u0404","jukcy":"\u0454","Kappa":"\u039A","kappa":"\u03BA","kappav":"\u03F0","Kcedil":"\u0136","kcedil":"\u0137","Kcy":"\u041A","kcy":"\u043A","Kfr":"\uD835\uDD0E","kfr":"\uD835\uDD28","kgreen":"\u0138","KHcy":"\u0425","khcy":"\u0445","KJcy":"\u040C","kjcy":"\u045C","Kopf":"\uD835\uDD42","kopf":"\uD835\uDD5C","Kscr":"\uD835\uDCA6","kscr":"\uD835\uDCC0","lAarr":"\u21DA","Lacute":"\u0139","lacute":"\u013A","laemptyv":"\u29B4","lagran":"\u2112","Lambda":"\u039B","lambda":"\u03BB","lang":"\u27E8","Lang":"\u27EA","langd":"\u2991","langle":"\u27E8","lap":"\u2A85","Laplacetrf":"\u2112","laquo":"\u00AB","larrb":"\u21E4","larrbfs":"\u291F","larr":"\u2190","Larr":"\u219E","lArr":"\u21D0","larrfs":"\u291D","larrhk":"\u21A9","larrlp":"\u21AB","larrpl":"\u2939","larrsim":"\u2973","larrtl":"\u21A2","latail":"\u2919","lAtail":"\u291B","lat":"\u2AAB","late":"\u2AAD","lates":"\u2AAD\uFE00","lbarr":"\u290C","lBarr":"\u290E","lbbrk":"\u2772","lbrace":"{","lbrack":"[","lbrke":"\u298B","lbrksld":"\u298F","lbrkslu":"\u298D","Lcaron":"\u013D","lcaron":"\u013E","Lcedil":"\u013B","lcedil":"\u013C","lceil":"\u2308","lcub":"{","Lcy":"\u041B","lcy":"\u043B","ldca":"\u2936","ldquo":"\u201C","ldquor":"\u201E","ldrdhar":"\u2967","ldrushar":"\u294B","ldsh":"\u21B2","le":"\u2264","lE":"\u2266","LeftAngleBracket":"\u27E8","LeftArrowBar":"\u21E4","leftarrow":"\u2190","LeftArrow":"\u2190","Leftarrow":"\u21D0","LeftArrowRightArrow":"\u21C6","leftarrowtail":"\u21A2","LeftCeiling":"\u2308","LeftDoubleBracket":"\u27E6","LeftDownTeeVector":"\u2961","LeftDownVectorBar":"\u2959","LeftDownVector":"\u21C3","LeftFloor":"\u230A","leftharpoondown":"\u21BD","leftharpoonup":"\u21BC","leftleftarrows":"\u21C7","leftrightarrow":"\u2194","LeftRightArrow":"\u2194","Leftrightarrow":"\u21D4","leftrightarrows":"\u21C6","leftrightharpoons":"\u21CB","leftrightsquigarrow":"\u21AD","LeftRightVector":"\u294E","LeftTeeArrow":"\u21A4","LeftTee":"\u22A3","LeftTeeVector":"\u295A","leftthreetimes":"\u22CB","LeftTriangleBar":"\u29CF","LeftTriangle":"\u22B2","LeftTriangleEqual":"\u22B4","LeftUpDownVector":"\u2951","LeftUpTeeVector":"\u2960","LeftUpVectorBar":"\u2958","LeftUpVector":"\u21BF","LeftVectorBar":"\u2952","LeftVector":"\u21BC","lEg":"\u2A8B","leg":"\u22DA","leq":"\u2264","leqq":"\u2266","leqslant":"\u2A7D","lescc":"\u2AA8","les":"\u2A7D","lesdot":"\u2A7F","lesdoto":"\u2A81","lesdotor":"\u2A83","lesg":"\u22DA\uFE00","lesges":"\u2A93","lessapprox":"\u2A85","lessdot":"\u22D6","lesseqgtr":"\u22DA","lesseqqgtr":"\u2A8B","LessEqualGreater":"\u22DA","LessFullEqual":"\u2266","LessGreater":"\u2276","lessgtr":"\u2276","LessLess":"\u2AA1","lesssim":"\u2272","LessSlantEqual":"\u2A7D","LessTilde":"\u2272","lfisht":"\u297C","lfloor":"\u230A","Lfr":"\uD835\uDD0F","lfr":"\uD835\uDD29","lg":"\u2276","lgE":"\u2A91","lHar":"\u2962","lhard":"\u21BD","lharu":"\u21BC","lharul":"\u296A","lhblk":"\u2584","LJcy":"\u0409","ljcy":"\u0459","llarr":"\u21C7","ll":"\u226A","Ll":"\u22D8","llcorner":"\u231E","Lleftarrow":"\u21DA","llhard":"\u296B","lltri":"\u25FA","Lmidot":"\u013F","lmidot":"\u0140","lmoustache":"\u23B0","lmoust":"\u23B0","lnap":"\u2A89","lnapprox":"\u2A89","lne":"\u2A87","lnE":"\u2268","lneq":"\u2A87","lneqq":"\u2268","lnsim":"\u22E6","loang":"\u27EC","loarr":"\u21FD","lobrk":"\u27E6","longleftarrow":"\u27F5","LongLeftArrow":"\u27F5","Longleftarrow":"\u27F8","longleftrightarrow":"\u27F7","LongLeftRightArrow":"\u27F7","Longleftrightarrow":"\u27FA","longmapsto":"\u27FC","longrightarrow":"\u27F6","LongRightArrow":"\u27F6","Longrightarrow":"\u27F9","looparrowleft":"\u21AB","looparrowright":"\u21AC","lopar":"\u2985","Lopf":"\uD835\uDD43","lopf":"\uD835\uDD5D","loplus":"\u2A2D","lotimes":"\u2A34","lowast":"\u2217","lowbar":"_","LowerLeftArrow":"\u2199","LowerRightArrow":"\u2198","loz":"\u25CA","lozenge":"\u25CA","lozf":"\u29EB","lpar":"(","lparlt":"\u2993","lrarr":"\u21C6","lrcorner":"\u231F","lrhar":"\u21CB","lrhard":"\u296D","lrm":"\u200E","lrtri":"\u22BF","lsaquo":"\u2039","lscr":"\uD835\uDCC1","Lscr":"\u2112","lsh":"\u21B0","Lsh":"\u21B0","lsim":"\u2272","lsime":"\u2A8D","lsimg":"\u2A8F","lsqb":"[","lsquo":"\u2018","lsquor":"\u201A","Lstrok":"\u0141","lstrok":"\u0142","ltcc":"\u2AA6","ltcir":"\u2A79","lt":"<","LT":"<","Lt":"\u226A","ltdot":"\u22D6","lthree":"\u22CB","ltimes":"\u22C9","ltlarr":"\u2976","ltquest":"\u2A7B","ltri":"\u25C3","ltrie":"\u22B4","ltrif":"\u25C2","ltrPar":"\u2996","lurdshar":"\u294A","luruhar":"\u2966","lvertneqq":"\u2268\uFE00","lvnE":"\u2268\uFE00","macr":"\u00AF","male":"\u2642","malt":"\u2720","maltese":"\u2720","Map":"\u2905","map":"\u21A6","mapsto":"\u21A6","mapstodown":"\u21A7","mapstoleft":"\u21A4","mapstoup":"\u21A5","marker":"\u25AE","mcomma":"\u2A29","Mcy":"\u041C","mcy":"\u043C","mdash":"\u2014","mDDot":"\u223A","measuredangle":"\u2221","MediumSpace":"\u205F","Mellintrf":"\u2133","Mfr":"\uD835\uDD10","mfr":"\uD835\uDD2A","mho":"\u2127","micro":"\u00B5","midast":"*","midcir":"\u2AF0","mid":"\u2223","middot":"\u00B7","minusb":"\u229F","minus":"\u2212","minusd":"\u2238","minusdu":"\u2A2A","MinusPlus":"\u2213","mlcp":"\u2ADB","mldr":"\u2026","mnplus":"\u2213","models":"\u22A7","Mopf":"\uD835\uDD44","mopf":"\uD835\uDD5E","mp":"\u2213","mscr":"\uD835\uDCC2","Mscr":"\u2133","mstpos":"\u223E","Mu":"\u039C","mu":"\u03BC","multimap":"\u22B8","mumap":"\u22B8","nabla":"\u2207","Nacute":"\u0143","nacute":"\u0144","nang":"\u2220\u20D2","nap":"\u2249","napE":"\u2A70\u0338","napid":"\u224B\u0338","napos":"\u0149","napprox":"\u2249","natural":"\u266E","naturals":"\u2115","natur":"\u266E","nbsp":"\u00A0","nbump":"\u224E\u0338","nbumpe":"\u224F\u0338","ncap":"\u2A43","Ncaron":"\u0147","ncaron":"\u0148","Ncedil":"\u0145","ncedil":"\u0146","ncong":"\u2247","ncongdot":"\u2A6D\u0338","ncup":"\u2A42","Ncy":"\u041D","ncy":"\u043D","ndash":"\u2013","nearhk":"\u2924","nearr":"\u2197","neArr":"\u21D7","nearrow":"\u2197","ne":"\u2260","nedot":"\u2250\u0338","NegativeMediumSpace":"\u200B","NegativeThickSpace":"\u200B","NegativeThinSpace":"\u200B","NegativeVeryThinSpace":"\u200B","nequiv":"\u2262","nesear":"\u2928","nesim":"\u2242\u0338","NestedGreaterGreater":"\u226B","NestedLessLess":"\u226A","NewLine":"\n","nexist":"\u2204","nexists":"\u2204","Nfr":"\uD835\uDD11","nfr":"\uD835\uDD2B","ngE":"\u2267\u0338","nge":"\u2271","ngeq":"\u2271","ngeqq":"\u2267\u0338","ngeqslant":"\u2A7E\u0338","nges":"\u2A7E\u0338","nGg":"\u22D9\u0338","ngsim":"\u2275","nGt":"\u226B\u20D2","ngt":"\u226F","ngtr":"\u226F","nGtv":"\u226B\u0338","nharr":"\u21AE","nhArr":"\u21CE","nhpar":"\u2AF2","ni":"\u220B","nis":"\u22FC","nisd":"\u22FA","niv":"\u220B","NJcy":"\u040A","njcy":"\u045A","nlarr":"\u219A","nlArr":"\u21CD","nldr":"\u2025","nlE":"\u2266\u0338","nle":"\u2270","nleftarrow":"\u219A","nLeftarrow":"\u21CD","nleftrightarrow":"\u21AE","nLeftrightarrow":"\u21CE","nleq":"\u2270","nleqq":"\u2266\u0338","nleqslant":"\u2A7D\u0338","nles":"\u2A7D\u0338","nless":"\u226E","nLl":"\u22D8\u0338","nlsim":"\u2274","nLt":"\u226A\u20D2","nlt":"\u226E","nltri":"\u22EA","nltrie":"\u22EC","nLtv":"\u226A\u0338","nmid":"\u2224","NoBreak":"\u2060","NonBreakingSpace":"\u00A0","nopf":"\uD835\uDD5F","Nopf":"\u2115","Not":"\u2AEC","not":"\u00AC","NotCongruent":"\u2262","NotCupCap":"\u226D","NotDoubleVerticalBar":"\u2226","NotElement":"\u2209","NotEqual":"\u2260","NotEqualTilde":"\u2242\u0338","NotExists":"\u2204","NotGreater":"\u226F","NotGreaterEqual":"\u2271","NotGreaterFullEqual":"\u2267\u0338","NotGreaterGreater":"\u226B\u0338","NotGreaterLess":"\u2279","NotGreaterSlantEqual":"\u2A7E\u0338","NotGreaterTilde":"\u2275","NotHumpDownHump":"\u224E\u0338","NotHumpEqual":"\u224F\u0338","notin":"\u2209","notindot":"\u22F5\u0338","notinE":"\u22F9\u0338","notinva":"\u2209","notinvb":"\u22F7","notinvc":"\u22F6","NotLeftTriangleBar":"\u29CF\u0338","NotLeftTriangle":"\u22EA","NotLeftTriangleEqual":"\u22EC","NotLess":"\u226E","NotLessEqual":"\u2270","NotLessGreater":"\u2278","NotLessLess":"\u226A\u0338","NotLessSlantEqual":"\u2A7D\u0338","NotLessTilde":"\u2274","NotNestedGreaterGreater":"\u2AA2\u0338","NotNestedLessLess":"\u2AA1\u0338","notni":"\u220C","notniva":"\u220C","notnivb":"\u22FE","notnivc":"\u22FD","NotPrecedes":"\u2280","NotPrecedesEqual":"\u2AAF\u0338","NotPrecedesSlantEqual":"\u22E0","NotReverseElement":"\u220C","NotRightTriangleBar":"\u29D0\u0338","NotRightTriangle":"\u22EB","NotRightTriangleEqual":"\u22ED","NotSquareSubset":"\u228F\u0338","NotSquareSubsetEqual":"\u22E2","NotSquareSuperset":"\u2290\u0338","NotSquareSupersetEqual":"\u22E3","NotSubset":"\u2282\u20D2","NotSubsetEqual":"\u2288","NotSucceeds":"\u2281","NotSucceedsEqual":"\u2AB0\u0338","NotSucceedsSlantEqual":"\u22E1","NotSucceedsTilde":"\u227F\u0338","NotSuperset":"\u2283\u20D2","NotSupersetEqual":"\u2289","NotTilde":"\u2241","NotTildeEqual":"\u2244","NotTildeFullEqual":"\u2247","NotTildeTilde":"\u2249","NotVerticalBar":"\u2224","nparallel":"\u2226","npar":"\u2226","nparsl":"\u2AFD\u20E5","npart":"\u2202\u0338","npolint":"\u2A14","npr":"\u2280","nprcue":"\u22E0","nprec":"\u2280","npreceq":"\u2AAF\u0338","npre":"\u2AAF\u0338","nrarrc":"\u2933\u0338","nrarr":"\u219B","nrArr":"\u21CF","nrarrw":"\u219D\u0338","nrightarrow":"\u219B","nRightarrow":"\u21CF","nrtri":"\u22EB","nrtrie":"\u22ED","nsc":"\u2281","nsccue":"\u22E1","nsce":"\u2AB0\u0338","Nscr":"\uD835\uDCA9","nscr":"\uD835\uDCC3","nshortmid":"\u2224","nshortparallel":"\u2226","nsim":"\u2241","nsime":"\u2244","nsimeq":"\u2244","nsmid":"\u2224","nspar":"\u2226","nsqsube":"\u22E2","nsqsupe":"\u22E3","nsub":"\u2284","nsubE":"\u2AC5\u0338","nsube":"\u2288","nsubset":"\u2282\u20D2","nsubseteq":"\u2288","nsubseteqq":"\u2AC5\u0338","nsucc":"\u2281","nsucceq":"\u2AB0\u0338","nsup":"\u2285","nsupE":"\u2AC6\u0338","nsupe":"\u2289","nsupset":"\u2283\u20D2","nsupseteq":"\u2289","nsupseteqq":"\u2AC6\u0338","ntgl":"\u2279","Ntilde":"\u00D1","ntilde":"\u00F1","ntlg":"\u2278","ntriangleleft":"\u22EA","ntrianglelefteq":"\u22EC","ntriangleright":"\u22EB","ntrianglerighteq":"\u22ED","Nu":"\u039D","nu":"\u03BD","num":"#","numero":"\u2116","numsp":"\u2007","nvap":"\u224D\u20D2","nvdash":"\u22AC","nvDash":"\u22AD","nVdash":"\u22AE","nVDash":"\u22AF","nvge":"\u2265\u20D2","nvgt":">\u20D2","nvHarr":"\u2904","nvinfin":"\u29DE","nvlArr":"\u2902","nvle":"\u2264\u20D2","nvlt":"<\u20D2","nvltrie":"\u22B4\u20D2","nvrArr":"\u2903","nvrtrie":"\u22B5\u20D2","nvsim":"\u223C\u20D2","nwarhk":"\u2923","nwarr":"\u2196","nwArr":"\u21D6","nwarrow":"\u2196","nwnear":"\u2927","Oacute":"\u00D3","oacute":"\u00F3","oast":"\u229B","Ocirc":"\u00D4","ocirc":"\u00F4","ocir":"\u229A","Ocy":"\u041E","ocy":"\u043E","odash":"\u229D","Odblac":"\u0150","odblac":"\u0151","odiv":"\u2A38","odot":"\u2299","odsold":"\u29BC","OElig":"\u0152","oelig":"\u0153","ofcir":"\u29BF","Ofr":"\uD835\uDD12","ofr":"\uD835\uDD2C","ogon":"\u02DB","Ograve":"\u00D2","ograve":"\u00F2","ogt":"\u29C1","ohbar":"\u29B5","ohm":"\u03A9","oint":"\u222E","olarr":"\u21BA","olcir":"\u29BE","olcross":"\u29BB","oline":"\u203E","olt":"\u29C0","Omacr":"\u014C","omacr":"\u014D","Omega":"\u03A9","omega":"\u03C9","Omicron":"\u039F","omicron":"\u03BF","omid":"\u29B6","ominus":"\u2296","Oopf":"\uD835\uDD46","oopf":"\uD835\uDD60","opar":"\u29B7","OpenCurlyDoubleQuote":"\u201C","OpenCurlyQuote":"\u2018","operp":"\u29B9","oplus":"\u2295","orarr":"\u21BB","Or":"\u2A54","or":"\u2228","ord":"\u2A5D","order":"\u2134","orderof":"\u2134","ordf":"\u00AA","ordm":"\u00BA","origof":"\u22B6","oror":"\u2A56","orslope":"\u2A57","orv":"\u2A5B","oS":"\u24C8","Oscr":"\uD835\uDCAA","oscr":"\u2134","Oslash":"\u00D8","oslash":"\u00F8","osol":"\u2298","Otilde":"\u00D5","otilde":"\u00F5","otimesas":"\u2A36","Otimes":"\u2A37","otimes":"\u2297","Ouml":"\u00D6","ouml":"\u00F6","ovbar":"\u233D","OverBar":"\u203E","OverBrace":"\u23DE","OverBracket":"\u23B4","OverParenthesis":"\u23DC","para":"\u00B6","parallel":"\u2225","par":"\u2225","parsim":"\u2AF3","parsl":"\u2AFD","part":"\u2202","PartialD":"\u2202","Pcy":"\u041F","pcy":"\u043F","percnt":"%","period":".","permil":"\u2030","perp":"\u22A5","pertenk":"\u2031","Pfr":"\uD835\uDD13","pfr":"\uD835\uDD2D","Phi":"\u03A6","phi":"\u03C6","phiv":"\u03D5","phmmat":"\u2133","phone":"\u260E","Pi":"\u03A0","pi":"\u03C0","pitchfork":"\u22D4","piv":"\u03D6","planck":"\u210F","planckh":"\u210E","plankv":"\u210F","plusacir":"\u2A23","plusb":"\u229E","pluscir":"\u2A22","plus":"+","plusdo":"\u2214","plusdu":"\u2A25","pluse":"\u2A72","PlusMinus":"\u00B1","plusmn":"\u00B1","plussim":"\u2A26","plustwo":"\u2A27","pm":"\u00B1","Poincareplane":"\u210C","pointint":"\u2A15","popf":"\uD835\uDD61","Popf":"\u2119","pound":"\u00A3","prap":"\u2AB7","Pr":"\u2ABB","pr":"\u227A","prcue":"\u227C","precapprox":"\u2AB7","prec":"\u227A","preccurlyeq":"\u227C","Precedes":"\u227A","PrecedesEqual":"\u2AAF","PrecedesSlantEqual":"\u227C","PrecedesTilde":"\u227E","preceq":"\u2AAF","precnapprox":"\u2AB9","precneqq":"\u2AB5","precnsim":"\u22E8","pre":"\u2AAF","prE":"\u2AB3","precsim":"\u227E","prime":"\u2032","Prime":"\u2033","primes":"\u2119","prnap":"\u2AB9","prnE":"\u2AB5","prnsim":"\u22E8","prod":"\u220F","Product":"\u220F","profalar":"\u232E","profline":"\u2312","profsurf":"\u2313","prop":"\u221D","Proportional":"\u221D","Proportion":"\u2237","propto":"\u221D","prsim":"\u227E","prurel":"\u22B0","Pscr":"\uD835\uDCAB","pscr":"\uD835\uDCC5","Psi":"\u03A8","psi":"\u03C8","puncsp":"\u2008","Qfr":"\uD835\uDD14","qfr":"\uD835\uDD2E","qint":"\u2A0C","qopf":"\uD835\uDD62","Qopf":"\u211A","qprime":"\u2057","Qscr":"\uD835\uDCAC","qscr":"\uD835\uDCC6","quaternions":"\u210D","quatint":"\u2A16","quest":"?","questeq":"\u225F","quot":"\"","QUOT":"\"","rAarr":"\u21DB","race":"\u223D\u0331","Racute":"\u0154","racute":"\u0155","radic":"\u221A","raemptyv":"\u29B3","rang":"\u27E9","Rang":"\u27EB","rangd":"\u2992","range":"\u29A5","rangle":"\u27E9","raquo":"\u00BB","rarrap":"\u2975","rarrb":"\u21E5","rarrbfs":"\u2920","rarrc":"\u2933","rarr":"\u2192","Rarr":"\u21A0","rArr":"\u21D2","rarrfs":"\u291E","rarrhk":"\u21AA","rarrlp":"\u21AC","rarrpl":"\u2945","rarrsim":"\u2974","Rarrtl":"\u2916","rarrtl":"\u21A3","rarrw":"\u219D","ratail":"\u291A","rAtail":"\u291C","ratio":"\u2236","rationals":"\u211A","rbarr":"\u290D","rBarr":"\u290F","RBarr":"\u2910","rbbrk":"\u2773","rbrace":"}","rbrack":"]","rbrke":"\u298C","rbrksld":"\u298E","rbrkslu":"\u2990","Rcaron":"\u0158","rcaron":"\u0159","Rcedil":"\u0156","rcedil":"\u0157","rceil":"\u2309","rcub":"}","Rcy":"\u0420","rcy":"\u0440","rdca":"\u2937","rdldhar":"\u2969","rdquo":"\u201D","rdquor":"\u201D","rdsh":"\u21B3","real":"\u211C","realine":"\u211B","realpart":"\u211C","reals":"\u211D","Re":"\u211C","rect":"\u25AD","reg":"\u00AE","REG":"\u00AE","ReverseElement":"\u220B","ReverseEquilibrium":"\u21CB","ReverseUpEquilibrium":"\u296F","rfisht":"\u297D","rfloor":"\u230B","rfr":"\uD835\uDD2F","Rfr":"\u211C","rHar":"\u2964","rhard":"\u21C1","rharu":"\u21C0","rharul":"\u296C","Rho":"\u03A1","rho":"\u03C1","rhov":"\u03F1","RightAngleBracket":"\u27E9","RightArrowBar":"\u21E5","rightarrow":"\u2192","RightArrow":"\u2192","Rightarrow":"\u21D2","RightArrowLeftArrow":"\u21C4","rightarrowtail":"\u21A3","RightCeiling":"\u2309","RightDoubleBracket":"\u27E7","RightDownTeeVector":"\u295D","RightDownVectorBar":"\u2955","RightDownVector":"\u21C2","RightFloor":"\u230B","rightharpoondown":"\u21C1","rightharpoonup":"\u21C0","rightleftarrows":"\u21C4","rightleftharpoons":"\u21CC","rightrightarrows":"\u21C9","rightsquigarrow":"\u219D","RightTeeArrow":"\u21A6","RightTee":"\u22A2","RightTeeVector":"\u295B","rightthreetimes":"\u22CC","RightTriangleBar":"\u29D0","RightTriangle":"\u22B3","RightTriangleEqual":"\u22B5","RightUpDownVector":"\u294F","RightUpTeeVector":"\u295C","RightUpVectorBar":"\u2954","RightUpVector":"\u21BE","RightVectorBar":"\u2953","RightVector":"\u21C0","ring":"\u02DA","risingdotseq":"\u2253","rlarr":"\u21C4","rlhar":"\u21CC","rlm":"\u200F","rmoustache":"\u23B1","rmoust":"\u23B1","rnmid":"\u2AEE","roang":"\u27ED","roarr":"\u21FE","robrk":"\u27E7","ropar":"\u2986","ropf":"\uD835\uDD63","Ropf":"\u211D","roplus":"\u2A2E","rotimes":"\u2A35","RoundImplies":"\u2970","rpar":")","rpargt":"\u2994","rppolint":"\u2A12","rrarr":"\u21C9","Rrightarrow":"\u21DB","rsaquo":"\u203A","rscr":"\uD835\uDCC7","Rscr":"\u211B","rsh":"\u21B1","Rsh":"\u21B1","rsqb":"]","rsquo":"\u2019","rsquor":"\u2019","rthree":"\u22CC","rtimes":"\u22CA","rtri":"\u25B9","rtrie":"\u22B5","rtrif":"\u25B8","rtriltri":"\u29CE","RuleDelayed":"\u29F4","ruluhar":"\u2968","rx":"\u211E","Sacute":"\u015A","sacute":"\u015B","sbquo":"\u201A","scap":"\u2AB8","Scaron":"\u0160","scaron":"\u0161","Sc":"\u2ABC","sc":"\u227B","sccue":"\u227D","sce":"\u2AB0","scE":"\u2AB4","Scedil":"\u015E","scedil":"\u015F","Scirc":"\u015C","scirc":"\u015D","scnap":"\u2ABA","scnE":"\u2AB6","scnsim":"\u22E9","scpolint":"\u2A13","scsim":"\u227F","Scy":"\u0421","scy":"\u0441","sdotb":"\u22A1","sdot":"\u22C5","sdote":"\u2A66","searhk":"\u2925","searr":"\u2198","seArr":"\u21D8","searrow":"\u2198","sect":"\u00A7","semi":";","seswar":"\u2929","setminus":"\u2216","setmn":"\u2216","sext":"\u2736","Sfr":"\uD835\uDD16","sfr":"\uD835\uDD30","sfrown":"\u2322","sharp":"\u266F","SHCHcy":"\u0429","shchcy":"\u0449","SHcy":"\u0428","shcy":"\u0448","ShortDownArrow":"\u2193","ShortLeftArrow":"\u2190","shortmid":"\u2223","shortparallel":"\u2225","ShortRightArrow":"\u2192","ShortUpArrow":"\u2191","shy":"\u00AD","Sigma":"\u03A3","sigma":"\u03C3","sigmaf":"\u03C2","sigmav":"\u03C2","sim":"\u223C","simdot":"\u2A6A","sime":"\u2243","simeq":"\u2243","simg":"\u2A9E","simgE":"\u2AA0","siml":"\u2A9D","simlE":"\u2A9F","simne":"\u2246","simplus":"\u2A24","simrarr":"\u2972","slarr":"\u2190","SmallCircle":"\u2218","smallsetminus":"\u2216","smashp":"\u2A33","smeparsl":"\u29E4","smid":"\u2223","smile":"\u2323","smt":"\u2AAA","smte":"\u2AAC","smtes":"\u2AAC\uFE00","SOFTcy":"\u042C","softcy":"\u044C","solbar":"\u233F","solb":"\u29C4","sol":"/","Sopf":"\uD835\uDD4A","sopf":"\uD835\uDD64","spades":"\u2660","spadesuit":"\u2660","spar":"\u2225","sqcap":"\u2293","sqcaps":"\u2293\uFE00","sqcup":"\u2294","sqcups":"\u2294\uFE00","Sqrt":"\u221A","sqsub":"\u228F","sqsube":"\u2291","sqsubset":"\u228F","sqsubseteq":"\u2291","sqsup":"\u2290","sqsupe":"\u2292","sqsupset":"\u2290","sqsupseteq":"\u2292","square":"\u25A1","Square":"\u25A1","SquareIntersection":"\u2293","SquareSubset":"\u228F","SquareSubsetEqual":"\u2291","SquareSuperset":"\u2290","SquareSupersetEqual":"\u2292","SquareUnion":"\u2294","squarf":"\u25AA","squ":"\u25A1","squf":"\u25AA","srarr":"\u2192","Sscr":"\uD835\uDCAE","sscr":"\uD835\uDCC8","ssetmn":"\u2216","ssmile":"\u2323","sstarf":"\u22C6","Star":"\u22C6","star":"\u2606","starf":"\u2605","straightepsilon":"\u03F5","straightphi":"\u03D5","strns":"\u00AF","sub":"\u2282","Sub":"\u22D0","subdot":"\u2ABD","subE":"\u2AC5","sube":"\u2286","subedot":"\u2AC3","submult":"\u2AC1","subnE":"\u2ACB","subne":"\u228A","subplus":"\u2ABF","subrarr":"\u2979","subset":"\u2282","Subset":"\u22D0","subseteq":"\u2286","subseteqq":"\u2AC5","SubsetEqual":"\u2286","subsetneq":"\u228A","subsetneqq":"\u2ACB","subsim":"\u2AC7","subsub":"\u2AD5","subsup":"\u2AD3","succapprox":"\u2AB8","succ":"\u227B","succcurlyeq":"\u227D","Succeeds":"\u227B","SucceedsEqual":"\u2AB0","SucceedsSlantEqual":"\u227D","SucceedsTilde":"\u227F","succeq":"\u2AB0","succnapprox":"\u2ABA","succneqq":"\u2AB6","succnsim":"\u22E9","succsim":"\u227F","SuchThat":"\u220B","sum":"\u2211","Sum":"\u2211","sung":"\u266A","sup1":"\u00B9","sup2":"\u00B2","sup3":"\u00B3","sup":"\u2283","Sup":"\u22D1","supdot":"\u2ABE","supdsub":"\u2AD8","supE":"\u2AC6","supe":"\u2287","supedot":"\u2AC4","Superset":"\u2283","SupersetEqual":"\u2287","suphsol":"\u27C9","suphsub":"\u2AD7","suplarr":"\u297B","supmult":"\u2AC2","supnE":"\u2ACC","supne":"\u228B","supplus":"\u2AC0","supset":"\u2283","Supset":"\u22D1","supseteq":"\u2287","supseteqq":"\u2AC6","supsetneq":"\u228B","supsetneqq":"\u2ACC","supsim":"\u2AC8","supsub":"\u2AD4","supsup":"\u2AD6","swarhk":"\u2926","swarr":"\u2199","swArr":"\u21D9","swarrow":"\u2199","swnwar":"\u292A","szlig":"\u00DF","Tab":"\t","target":"\u2316","Tau":"\u03A4","tau":"\u03C4","tbrk":"\u23B4","Tcaron":"\u0164","tcaron":"\u0165","Tcedil":"\u0162","tcedil":"\u0163","Tcy":"\u0422","tcy":"\u0442","tdot":"\u20DB","telrec":"\u2315","Tfr":"\uD835\uDD17","tfr":"\uD835\uDD31","there4":"\u2234","therefore":"\u2234","Therefore":"\u2234","Theta":"\u0398","theta":"\u03B8","thetasym":"\u03D1","thetav":"\u03D1","thickapprox":"\u2248","thicksim":"\u223C","ThickSpace":"\u205F\u200A","ThinSpace":"\u2009","thinsp":"\u2009","thkap":"\u2248","thksim":"\u223C","THORN":"\u00DE","thorn":"\u00FE","tilde":"\u02DC","Tilde":"\u223C","TildeEqual":"\u2243","TildeFullEqual":"\u2245","TildeTilde":"\u2248","timesbar":"\u2A31","timesb":"\u22A0","times":"\u00D7","timesd":"\u2A30","tint":"\u222D","toea":"\u2928","topbot":"\u2336","topcir":"\u2AF1","top":"\u22A4","Topf":"\uD835\uDD4B","topf":"\uD835\uDD65","topfork":"\u2ADA","tosa":"\u2929","tprime":"\u2034","trade":"\u2122","TRADE":"\u2122","triangle":"\u25B5","triangledown":"\u25BF","triangleleft":"\u25C3","trianglelefteq":"\u22B4","triangleq":"\u225C","triangleright":"\u25B9","trianglerighteq":"\u22B5","tridot":"\u25EC","trie":"\u225C","triminus":"\u2A3A","TripleDot":"\u20DB","triplus":"\u2A39","trisb":"\u29CD","tritime":"\u2A3B","trpezium":"\u23E2","Tscr":"\uD835\uDCAF","tscr":"\uD835\uDCC9","TScy":"\u0426","tscy":"\u0446","TSHcy":"\u040B","tshcy":"\u045B","Tstrok":"\u0166","tstrok":"\u0167","twixt":"\u226C","twoheadleftarrow":"\u219E","twoheadrightarrow":"\u21A0","Uacute":"\u00DA","uacute":"\u00FA","uarr":"\u2191","Uarr":"\u219F","uArr":"\u21D1","Uarrocir":"\u2949","Ubrcy":"\u040E","ubrcy":"\u045E","Ubreve":"\u016C","ubreve":"\u016D","Ucirc":"\u00DB","ucirc":"\u00FB","Ucy":"\u0423","ucy":"\u0443","udarr":"\u21C5","Udblac":"\u0170","udblac":"\u0171","udhar":"\u296E","ufisht":"\u297E","Ufr":"\uD835\uDD18","ufr":"\uD835\uDD32","Ugrave":"\u00D9","ugrave":"\u00F9","uHar":"\u2963","uharl":"\u21BF","uharr":"\u21BE","uhblk":"\u2580","ulcorn":"\u231C","ulcorner":"\u231C","ulcrop":"\u230F","ultri":"\u25F8","Umacr":"\u016A","umacr":"\u016B","uml":"\u00A8","UnderBar":"_","UnderBrace":"\u23DF","UnderBracket":"\u23B5","UnderParenthesis":"\u23DD","Union":"\u22C3","UnionPlus":"\u228E","Uogon":"\u0172","uogon":"\u0173","Uopf":"\uD835\uDD4C","uopf":"\uD835\uDD66","UpArrowBar":"\u2912","uparrow":"\u2191","UpArrow":"\u2191","Uparrow":"\u21D1","UpArrowDownArrow":"\u21C5","updownarrow":"\u2195","UpDownArrow":"\u2195","Updownarrow":"\u21D5","UpEquilibrium":"\u296E","upharpoonleft":"\u21BF","upharpoonright":"\u21BE","uplus":"\u228E","UpperLeftArrow":"\u2196","UpperRightArrow":"\u2197","upsi":"\u03C5","Upsi":"\u03D2","upsih":"\u03D2","Upsilon":"\u03A5","upsilon":"\u03C5","UpTeeArrow":"\u21A5","UpTee":"\u22A5","upuparrows":"\u21C8","urcorn":"\u231D","urcorner":"\u231D","urcrop":"\u230E","Uring":"\u016E","uring":"\u016F","urtri":"\u25F9","Uscr":"\uD835\uDCB0","uscr":"\uD835\uDCCA","utdot":"\u22F0","Utilde":"\u0168","utilde":"\u0169","utri":"\u25B5","utrif":"\u25B4","uuarr":"\u21C8","Uuml":"\u00DC","uuml":"\u00FC","uwangle":"\u29A7","vangrt":"\u299C","varepsilon":"\u03F5","varkappa":"\u03F0","varnothing":"\u2205","varphi":"\u03D5","varpi":"\u03D6","varpropto":"\u221D","varr":"\u2195","vArr":"\u21D5","varrho":"\u03F1","varsigma":"\u03C2","varsubsetneq":"\u228A\uFE00","varsubsetneqq":"\u2ACB\uFE00","varsupsetneq":"\u228B\uFE00","varsupsetneqq":"\u2ACC\uFE00","vartheta":"\u03D1","vartriangleleft":"\u22B2","vartriangleright":"\u22B3","vBar":"\u2AE8","Vbar":"\u2AEB","vBarv":"\u2AE9","Vcy":"\u0412","vcy":"\u0432","vdash":"\u22A2","vDash":"\u22A8","Vdash":"\u22A9","VDash":"\u22AB","Vdashl":"\u2AE6","veebar":"\u22BB","vee":"\u2228","Vee":"\u22C1","veeeq":"\u225A","vellip":"\u22EE","verbar":"|","Verbar":"\u2016","vert":"|","Vert":"\u2016","VerticalBar":"\u2223","VerticalLine":"|","VerticalSeparator":"\u2758","VerticalTilde":"\u2240","VeryThinSpace":"\u200A","Vfr":"\uD835\uDD19","vfr":"\uD835\uDD33","vltri":"\u22B2","vnsub":"\u2282\u20D2","vnsup":"\u2283\u20D2","Vopf":"\uD835\uDD4D","vopf":"\uD835\uDD67","vprop":"\u221D","vrtri":"\u22B3","Vscr":"\uD835\uDCB1","vscr":"\uD835\uDCCB","vsubnE":"\u2ACB\uFE00","vsubne":"\u228A\uFE00","vsupnE":"\u2ACC\uFE00","vsupne":"\u228B\uFE00","Vvdash":"\u22AA","vzigzag":"\u299A","Wcirc":"\u0174","wcirc":"\u0175","wedbar":"\u2A5F","wedge":"\u2227","Wedge":"\u22C0","wedgeq":"\u2259","weierp":"\u2118","Wfr":"\uD835\uDD1A","wfr":"\uD835\uDD34","Wopf":"\uD835\uDD4E","wopf":"\uD835\uDD68","wp":"\u2118","wr":"\u2240","wreath":"\u2240","Wscr":"\uD835\uDCB2","wscr":"\uD835\uDCCC","xcap":"\u22C2","xcirc":"\u25EF","xcup":"\u22C3","xdtri":"\u25BD","Xfr":"\uD835\uDD1B","xfr":"\uD835\uDD35","xharr":"\u27F7","xhArr":"\u27FA","Xi":"\u039E","xi":"\u03BE","xlarr":"\u27F5","xlArr":"\u27F8","xmap":"\u27FC","xnis":"\u22FB","xodot":"\u2A00","Xopf":"\uD835\uDD4F","xopf":"\uD835\uDD69","xoplus":"\u2A01","xotime":"\u2A02","xrarr":"\u27F6","xrArr":"\u27F9","Xscr":"\uD835\uDCB3","xscr":"\uD835\uDCCD","xsqcup":"\u2A06","xuplus":"\u2A04","xutri":"\u25B3","xvee":"\u22C1","xwedge":"\u22C0","Yacute":"\u00DD","yacute":"\u00FD","YAcy":"\u042F","yacy":"\u044F","Ycirc":"\u0176","ycirc":"\u0177","Ycy":"\u042B","ycy":"\u044B","yen":"\u00A5","Yfr":"\uD835\uDD1C","yfr":"\uD835\uDD36","YIcy":"\u0407","yicy":"\u0457","Yopf":"\uD835\uDD50","yopf":"\uD835\uDD6A","Yscr":"\uD835\uDCB4","yscr":"\uD835\uDCCE","YUcy":"\u042E","yucy":"\u044E","yuml":"\u00FF","Yuml":"\u0178","Zacute":"\u0179","zacute":"\u017A","Zcaron":"\u017D","zcaron":"\u017E","Zcy":"\u0417","zcy":"\u0437","Zdot":"\u017B","zdot":"\u017C","zeetrf":"\u2128","ZeroWidthSpace":"\u200B","Zeta":"\u0396","zeta":"\u03B6","zfr":"\uD835\uDD37","Zfr":"\u2128","ZHcy":"\u0416","zhcy":"\u0436","zigrarr":"\u21DD","zopf":"\uD835\uDD6B","Zopf":"\u2124","Zscr":"\uD835\uDCB5","zscr":"\uD835\uDCCF","zwj":"\u200D","zwnj":"\u200C"}
 },{}],55:[function(require,module,exports){
+module.exports={"Aacute":"\u00C1","aacute":"\u00E1","Acirc":"\u00C2","acirc":"\u00E2","acute":"\u00B4","AElig":"\u00C6","aelig":"\u00E6","Agrave":"\u00C0","agrave":"\u00E0","amp":"&","AMP":"&","Aring":"\u00C5","aring":"\u00E5","Atilde":"\u00C3","atilde":"\u00E3","Auml":"\u00C4","auml":"\u00E4","brvbar":"\u00A6","Ccedil":"\u00C7","ccedil":"\u00E7","cedil":"\u00B8","cent":"\u00A2","copy":"\u00A9","COPY":"\u00A9","curren":"\u00A4","deg":"\u00B0","divide":"\u00F7","Eacute":"\u00C9","eacute":"\u00E9","Ecirc":"\u00CA","ecirc":"\u00EA","Egrave":"\u00C8","egrave":"\u00E8","ETH":"\u00D0","eth":"\u00F0","Euml":"\u00CB","euml":"\u00EB","frac12":"\u00BD","frac14":"\u00BC","frac34":"\u00BE","gt":">","GT":">","Iacute":"\u00CD","iacute":"\u00ED","Icirc":"\u00CE","icirc":"\u00EE","iexcl":"\u00A1","Igrave":"\u00CC","igrave":"\u00EC","iquest":"\u00BF","Iuml":"\u00CF","iuml":"\u00EF","laquo":"\u00AB","lt":"<","LT":"<","macr":"\u00AF","micro":"\u00B5","middot":"\u00B7","nbsp":"\u00A0","not":"\u00AC","Ntilde":"\u00D1","ntilde":"\u00F1","Oacute":"\u00D3","oacute":"\u00F3","Ocirc":"\u00D4","ocirc":"\u00F4","Ograve":"\u00D2","ograve":"\u00F2","ordf":"\u00AA","ordm":"\u00BA","Oslash":"\u00D8","oslash":"\u00F8","Otilde":"\u00D5","otilde":"\u00F5","Ouml":"\u00D6","ouml":"\u00F6","para":"\u00B6","plusmn":"\u00B1","pound":"\u00A3","quot":"\"","QUOT":"\"","raquo":"\u00BB","reg":"\u00AE","REG":"\u00AE","sect":"\u00A7","shy":"\u00AD","sup1":"\u00B9","sup2":"\u00B2","sup3":"\u00B3","szlig":"\u00DF","THORN":"\u00DE","thorn":"\u00FE","times":"\u00D7","Uacute":"\u00DA","uacute":"\u00FA","Ucirc":"\u00DB","ucirc":"\u00FB","Ugrave":"\u00D9","ugrave":"\u00F9","uml":"\u00A8","Uuml":"\u00DC","uuml":"\u00FC","Yacute":"\u00DD","yacute":"\u00FD","yen":"\u00A5","yuml":"\u00FF"}
+},{}],56:[function(require,module,exports){
 module.exports={"amp":"&","apos":"'","gt":">","lt":"<","quot":"\""}
 
-},{}],56:[function(require,module,exports){
+},{}],57:[function(require,module,exports){
 module.exports = CollectingHandler;
 
 function CollectingHandler(cbs){
@@ -16083,7 +16432,7 @@ CollectingHandler.prototype.restart = function(){
 	}
 };
 
-},{"./":63}],57:[function(require,module,exports){
+},{"./":64}],58:[function(require,module,exports){
 var index = require("./index.js"),
     DomHandler = index.DomHandler,
 	DomUtils = index.DomUtils;
@@ -16180,7 +16529,7 @@ FeedHandler.prototype.onend = function() {
 
 module.exports = FeedHandler;
 
-},{"./index.js":63,"util":182}],58:[function(require,module,exports){
+},{"./index.js":64,"util":183}],59:[function(require,module,exports){
 var Tokenizer = require("./Tokenizer.js");
 
 /*
@@ -16519,7 +16868,7 @@ Parser.prototype.done = Parser.prototype.end;
 
 module.exports = Parser;
 
-},{"./Tokenizer.js":61,"events":157,"util":182}],59:[function(require,module,exports){
+},{"./Tokenizer.js":62,"events":158,"util":183}],60:[function(require,module,exports){
 module.exports = ProxyHandler;
 
 function ProxyHandler(cbs){
@@ -16547,7 +16896,7 @@ Object.keys(EVENTS).forEach(function(name){
 		throw Error("wrong number of arguments");
 	}
 });
-},{"./":63}],60:[function(require,module,exports){
+},{"./":64}],61:[function(require,module,exports){
 module.exports = Stream;
 
 var Parser = require("./WritableStream.js");
@@ -16583,7 +16932,7 @@ Object.keys(EVENTS).forEach(function(name){
 		throw Error("wrong number of arguments!");
 	}
 });
-},{"../":63,"./WritableStream.js":62,"util":182}],61:[function(require,module,exports){
+},{"../":64,"./WritableStream.js":63,"util":183}],62:[function(require,module,exports){
 module.exports = Tokenizer;
 
 var decodeCodePoint = require("entities/lib/decode_codepoint.js"),
@@ -17482,7 +17831,7 @@ Tokenizer.prototype._emitPartial = function(value){
 	}
 };
 
-},{"entities/lib/decode_codepoint.js":75,"entities/maps/entities.json":77,"entities/maps/legacy.json":78,"entities/maps/xml.json":79}],62:[function(require,module,exports){
+},{"entities/lib/decode_codepoint.js":76,"entities/maps/entities.json":78,"entities/maps/legacy.json":79,"entities/maps/xml.json":80}],63:[function(require,module,exports){
 module.exports = Stream;
 
 var Parser = require("./Parser.js"),
@@ -17504,7 +17853,7 @@ WritableStream.prototype._write = function(chunk, encoding, cb){
 	this._parser.write(chunk);
 	cb();
 };
-},{"./Parser.js":58,"readable-stream":89,"stream":178,"util":182}],63:[function(require,module,exports){
+},{"./Parser.js":59,"readable-stream":90,"stream":179,"util":183}],64:[function(require,module,exports){
 var Parser = require("./Parser.js"),
     DomHandler = require("domhandler");
 
@@ -17574,9 +17923,9 @@ module.exports = {
 	}
 };
 
-},{"./CollectingHandler.js":56,"./FeedHandler.js":57,"./Parser.js":58,"./ProxyHandler.js":59,"./Stream.js":60,"./Tokenizer.js":61,"./WritableStream.js":62,"domelementtype":64,"domhandler":65,"domutils":68}],64:[function(require,module,exports){
-arguments[4][45][0].apply(exports,arguments)
-},{"dup":45}],65:[function(require,module,exports){
+},{"./CollectingHandler.js":57,"./FeedHandler.js":58,"./Parser.js":59,"./ProxyHandler.js":60,"./Stream.js":61,"./Tokenizer.js":62,"./WritableStream.js":63,"domelementtype":65,"domhandler":66,"domutils":69}],65:[function(require,module,exports){
+arguments[4][46][0].apply(exports,arguments)
+},{"dup":46}],66:[function(require,module,exports){
 var ElementType = require("domelementtype");
 
 var re_whitespace = /\s+/g;
@@ -17749,7 +18098,7 @@ DomHandler.prototype.onprocessinginstruction = function(name, data){
 
 module.exports = DomHandler;
 
-},{"./lib/element":66,"./lib/node":67,"domelementtype":64}],66:[function(require,module,exports){
+},{"./lib/element":67,"./lib/node":68,"domelementtype":65}],67:[function(require,module,exports){
 // DOM-Level-1-compliant structure
 var NodePrototype = require('./node');
 var ElementPrototype = module.exports = Object.create(NodePrototype);
@@ -17771,7 +18120,7 @@ Object.keys(domLvl1).forEach(function(key) {
 	});
 });
 
-},{"./node":67}],67:[function(require,module,exports){
+},{"./node":68}],68:[function(require,module,exports){
 // This object will be used as the prototype for Nodes when creating a
 // DOM-Level-1-compliant structure.
 var NodePrototype = module.exports = {
@@ -17817,9 +18166,9 @@ Object.keys(domLvl1).forEach(function(key) {
 	});
 });
 
-},{}],68:[function(require,module,exports){
-arguments[4][38][0].apply(exports,arguments)
-},{"./lib/helpers":69,"./lib/legacy":70,"./lib/manipulation":71,"./lib/querying":72,"./lib/stringify":73,"./lib/traversal":74,"dup":38}],69:[function(require,module,exports){
+},{}],69:[function(require,module,exports){
+arguments[4][39][0].apply(exports,arguments)
+},{"./lib/helpers":70,"./lib/legacy":71,"./lib/manipulation":72,"./lib/querying":73,"./lib/stringify":74,"./lib/traversal":75,"dup":39}],70:[function(require,module,exports){
 // removeSubsets
 // Given an array of nodes, remove any member that is contained by another.
 exports.removeSubsets = function(nodes) {
@@ -17962,13 +18311,13 @@ exports.uniqueSort = function(nodes) {
 	return nodes;
 };
 
-},{}],70:[function(require,module,exports){
-arguments[4][40][0].apply(exports,arguments)
-},{"domelementtype":64,"dup":40}],71:[function(require,module,exports){
+},{}],71:[function(require,module,exports){
 arguments[4][41][0].apply(exports,arguments)
-},{"dup":41}],72:[function(require,module,exports){
+},{"domelementtype":65,"dup":41}],72:[function(require,module,exports){
 arguments[4][42][0].apply(exports,arguments)
-},{"domelementtype":64,"dup":42}],73:[function(require,module,exports){
+},{"dup":42}],73:[function(require,module,exports){
+arguments[4][43][0].apply(exports,arguments)
+},{"domelementtype":65,"dup":43}],74:[function(require,module,exports){
 var ElementType = require("domelementtype"),
     getOuterHTML = require("dom-serializer"),
     isTag = ElementType.isTag;
@@ -17992,7 +18341,7 @@ function getText(elem){
 	return "";
 }
 
-},{"dom-serializer":46,"domelementtype":64}],74:[function(require,module,exports){
+},{"dom-serializer":47,"domelementtype":65}],75:[function(require,module,exports){
 var getChildren = exports.getChildren = function(elem){
 	return elem.children;
 };
@@ -18018,17 +18367,17 @@ exports.getName = function(elem){
 	return elem.name;
 };
 
-},{}],75:[function(require,module,exports){
-arguments[4][50][0].apply(exports,arguments)
-},{"../maps/decode.json":76,"dup":50}],76:[function(require,module,exports){
-arguments[4][52][0].apply(exports,arguments)
-},{"dup":52}],77:[function(require,module,exports){
+},{}],76:[function(require,module,exports){
+arguments[4][51][0].apply(exports,arguments)
+},{"../maps/decode.json":77,"dup":51}],77:[function(require,module,exports){
 arguments[4][53][0].apply(exports,arguments)
 },{"dup":53}],78:[function(require,module,exports){
 arguments[4][54][0].apply(exports,arguments)
 },{"dup":54}],79:[function(require,module,exports){
 arguments[4][55][0].apply(exports,arguments)
 },{"dup":55}],80:[function(require,module,exports){
+arguments[4][56][0].apply(exports,arguments)
+},{"dup":56}],81:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -18121,7 +18470,7 @@ function forEach (xs, f) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_readable":82,"./_stream_writable":84,"_process":161,"core-util-is":85,"inherits":86}],81:[function(require,module,exports){
+},{"./_stream_readable":83,"./_stream_writable":85,"_process":162,"core-util-is":86,"inherits":87}],82:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -18169,7 +18518,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":83,"core-util-is":85,"inherits":86}],82:[function(require,module,exports){
+},{"./_stream_transform":84,"core-util-is":86,"inherits":87}],83:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -19124,7 +19473,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":80,"_process":161,"buffer":153,"core-util-is":85,"events":157,"inherits":86,"isarray":87,"stream":178,"string_decoder/":88,"util":152}],83:[function(require,module,exports){
+},{"./_stream_duplex":81,"_process":162,"buffer":154,"core-util-is":86,"events":158,"inherits":87,"isarray":88,"stream":179,"string_decoder/":89,"util":153}],84:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -19335,7 +19684,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":80,"core-util-is":85,"inherits":86}],84:[function(require,module,exports){
+},{"./_stream_duplex":81,"core-util-is":86,"inherits":87}],85:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -19816,7 +20165,7 @@ function endWritable(stream, state, cb) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":80,"_process":161,"buffer":153,"core-util-is":85,"inherits":86,"stream":178}],85:[function(require,module,exports){
+},{"./_stream_duplex":81,"_process":162,"buffer":154,"core-util-is":86,"inherits":87,"stream":179}],86:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -19927,7 +20276,7 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../../../../../../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js")})
-},{"../../../../../../../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js":159}],86:[function(require,module,exports){
+},{"../../../../../../../../../../../../../../../../../../usr/local/lib/node_modules/browserify/node_modules/insert-module-globals/node_modules/is-buffer/index.js":160}],87:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -19952,12 +20301,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],87:[function(require,module,exports){
+},{}],88:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],88:[function(require,module,exports){
+},{}],89:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -20180,7 +20529,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":153}],89:[function(require,module,exports){
+},{"buffer":154}],90:[function(require,module,exports){
 (function (process){
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = require('stream');
@@ -20194,7 +20543,7 @@ if (!process.browser && process.env.READABLE_STREAM === 'disable') {
 }
 
 }).call(this,require('_process'))
-},{"./lib/_stream_duplex.js":80,"./lib/_stream_passthrough.js":81,"./lib/_stream_readable.js":82,"./lib/_stream_transform.js":83,"./lib/_stream_writable.js":84,"_process":161,"stream":178}],90:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":81,"./lib/_stream_passthrough.js":82,"./lib/_stream_readable.js":83,"./lib/_stream_transform.js":84,"./lib/_stream_writable.js":85,"_process":162,"stream":179}],91:[function(require,module,exports){
 module.exports={
   "name": "cheerio",
   "version": "0.17.0",
@@ -20270,7 +20619,7 @@ module.exports={
   "readme": "ERROR: No README data found!"
 }
 
-},{}],91:[function(require,module,exports){
+},{}],92:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -27060,7 +27409,7 @@ module.exports={
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],92:[function(require,module,exports){
+},{}],93:[function(require,module,exports){
 
 /***** xregexp.js *****/
 
@@ -29370,7 +29719,7 @@ XRegExp = XRegExp || (function (undef) {
 }(XRegExp));
 
 
-},{}],93:[function(require,module,exports){
+},{}],94:[function(require,module,exports){
 var fs = require('fs'),
     path = require('path');
 
@@ -29479,7 +29828,7 @@ var DetectLang = module.exports = function (input) {
     });
 };
 
-},{"./iso-639.json":94,"fs":151,"path":160,"retext":104,"retext-language":101}],94:[function(require,module,exports){
+},{"./iso-639.json":95,"fs":152,"path":161,"retext":105,"retext-language":102}],95:[function(require,module,exports){
 module.exports={
   "aar": {
     "terminologic": null,
@@ -32027,12 +32376,12 @@ module.exports={
     "name": "Zaza; Dimili; Dimli; Kirdki; Kirmanjki; Zazaki"
   }
 }
-},{}],95:[function(require,module,exports){
+},{}],96:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./lib/franc');
 
-},{"./lib/franc":98}],96:[function(require,module,exports){
+},{"./lib/franc":99}],97:[function(require,module,exports){
 module.exports={
   "Latin": {
     "spa": " de|os |de | la|la | y | a |es |ón |ión|rec|ere|der| co|e l|el |en |ien|cho|ent|ech|ció|aci|o a|a p| el|a l|al |as |e d| en|na |ona|s d|da |nte| to|ad |ene|con| pr| su|tod| se|ho |los| pe|per|ers| lo|o d| ti|cia|n d|cio| es|ida|res|a t|tie|ion|rso|te |do | in|son| re| li|to |dad|tad|e s|est|pro|que|men| po|a e|oda|nci| qu| un|ue |ne |n e|s y|lib|su | na|s e|nac|ia |e e|tra| pa|or |ado|a d|nes|ra |se |ual|a c|er |por|com|nal|rta|a s|ber| o |one|s p|dos|rá |sta|les|des|ibe|ser|era|ar |ert|ter| di|ale|l d|nto|hos|del|ica|a a|s n|n c|oci|imi|io |o e|re |y l|e c|ant|cci| as|las|par|ame| cu|ici|ara|enc|s t|ndi| so|o s|mie|tos|una|bre|dic|cla|s l|e a|l p|pre|ntr|o t|ial|y a|nid|n p|a y|man|omo|so |n l| al|ali|s a|no | ig|s s|e p|nta|uma|ten|gua|ade|y e|soc|mo | fu|igu|o p|n t|hum|d d|ran|ria|y d|ada|tiv|l e|cas| ca|vid|l t|s c|ido|das|dis|s i| hu|s o|nad|fun| ma|rac|nda|eli|sar|und| ac|uni|mbr|a u|die|e i|qui|a i| ha|lar| tr|odo|ca |tic|o y|cti|lid|ori|ndo|ari| me|ta |ind|esa|cua|un |ier|tal|esp|seg|ele|ons|ito|ont|iva|s h|d y|nos|ist|rse| le|cie|ide|edi|ecc|ios|l m|r e|med|tor|sti|n a|rim|uie|ple|tri|ibr|sus|lo |ect|pen|y c|an |e h|n s|ern|tar|l y|egu|gur|ura|int|ond|mat|l r|r a|isf|ote",
@@ -32198,7 +32547,7 @@ module.exports={
     "ydd": " פֿ|ון |ער |ן א| אַ|דער|ט א| או|און|אַר|ען |פֿו| אױ| אי|ן פ|ֿון|רעכ| דע| רע|עכט|פֿא|ן ד|כט | די|די |אַ |אױף|ױף |ֿאַ| זײ| גע|אַל|אָס| אָ|ונג| הא|האָ|זײַ| מע|אָל|נג |װאָ|ַן |אַנ|רײַ| װא|ָס |באַ| יע|יעד|ניט|ן ז|ר א|יט |אָט|אָר|עדע|מען|זאָ|ָט |פֿר|ײַן| בא|טן |אין|ן ג|ין |ן װ|נאַ|ֿרײ|ר ה| זא|לעכ|ע א|אָד|ַ ר|ענט|אַצ|ַצי|אָנ| צו| װע|יז |מענ|ָדע|איז|ן מ|ַלע|בן |ר מ|טער| מי| פּ|מיט|טלע|ָל |עכע|ײט |ַנד|ע פ|לע |געז|לאַ|אַפ|עזע|ראַ| ני|ַפֿ|רן |ײַנ|נען|טיק|כע |פֿע|יע |הײט|ַהײ|נטש|ײַה|ט ד|ן ב|לן |ן נ|פֿט|שאַ|רונ| זי| װי|ט פ| דא|טאָ|דיק|קן |ר פ|ר ג|יקן|אָב|ף א|אַק|קער|ערע|כער|י פ|ות |ַרב|פּר|קט |עם |יאָ|ציע|ציא|יט־|צו |ישע| קײ|ן ק|סער| גל|דאָ|ונט|גן |ַרא|יקע| טא|ענע|לײַ|שן |ַנע|יק |טאַ|ס א|עט |נגע|ט־א|ָנא|־אי|יקט|נטע|ײנע|־ני|ָר |װער|י א|ן י|יך |זיך|ער־|ערן|אױס|ָבן|נדע|ָסע|װי |ֿעל|ר־נ|ן ה| גר|גלײ| צי|ראָ|זעל|עלק|נד |לקע|אָפ| כּ|ט װ|ג א| נא|ט צ|ר ד|עס |דור|גען|קע |ג פ|ֿט |ן ל|שע |ר ז|רע |ײטן|פּע|קלא|קײט|יטע|ים |ס ז|ײַ | דו|אַט| לא|ר װ|קײנ|עלש|י ד|לשא|יות|נט |ַרז|ע ר|ל ז|אַמ|ן ש| שו|אינ|נטל| הי|בעט|ָפּ|ף פ|ײַכ|בער|ן צ|מאָ| שט| לע|גער|ורך|רך |נעם|גרו|פֿן|לער|װעל|ע מ|ום |שפּ|ך א|יונ|רבע|עפֿ|טעט|ן כ|רעס|ערצ|ז א|עמע|ם א|שטע|כן |רט |י ג|סן |נער|ליט|ט ז|נעמ|ּרא|היו|אַש|ת װ|אומ|ק א|יבע|ֿן |ץ א|פֿי|ײן |ם ט"
   }
 }
-},{}],97:[function(require,module,exports){
+},{}],98:[function(require,module,exports){
 module.exports = {
   cmn: /[\u2E80-\u2E99\u2E9B-\u2EF3\u2F00-\u2FD5\u3005\u3007\u3021-\u3029\u3038-\u303B\u3400-\u4DB5\u4E00-\u9FCC\uF900-\uFA6D\uFA70-\uFAD9]|[\uD840-\uD868\uD86A-\uD86C][\uDC00-\uDFFF]|\uD869[\uDC00-\uDED6\uDF00-\uDFFF]|\uD86D[\uDC00-\uDF34\uDF40-\uDFFF]|\uD86E[\uDC00-\uDC1D]|\uD87E[\uDC00-\uDE1D]/g,
   Latin: /[A-Za-z\xAA\xBA\xC0-\xD6\xD8-\xF6\xF8-\u02B8\u02E0-\u02E4\u1D00-\u1D25\u1D2C-\u1D5C\u1D62-\u1D65\u1D6B-\u1D77\u1D79-\u1DBE\u1E00-\u1EFF\u2071\u207F\u2090-\u209C\u212A\u212B\u2132\u214E\u2160-\u2188\u2C60-\u2C7F\uA722-\uA787\uA78B-\uA78E\uA790-\uA7AD\uA7B0\uA7B1\uA7F7-\uA7FF\uAB30-\uAB5A\uAB5C-\uAB5F\uAB64\uFB00-\uFB06\uFF21-\uFF3A\uFF41-\uFF5A]/g,
@@ -32231,7 +32580,7 @@ module.exports = {
   aii: /[\u0700-\u070D\u070F-\u074A\u074D-\u074F]/g
 };
 
-},{}],98:[function(require,module,exports){
+},{}],99:[function(require,module,exports){
 'use strict';
 
 /*
@@ -32579,7 +32928,7 @@ detect.all = detectAll;
 
 module.exports = detect;
 
-},{"./data.json":96,"./expressions.js":97,"trigram-utils":99}],99:[function(require,module,exports){
+},{"./data.json":97,"./expressions.js":98,"trigram-utils":100}],100:[function(require,module,exports){
 'use strict';
 
 var getTrigrams,
@@ -32785,7 +33134,7 @@ module.exports = {
     'tuplesAsDictionary': getCleanTrigramTuplesAsDictionary
 };
 
-},{"n-gram":100}],100:[function(require,module,exports){
+},{"n-gram":101}],101:[function(require,module,exports){
 'use strict';
 
 /**
@@ -32883,7 +33232,7 @@ nGram.bigram = nGram(2);
 
 nGram.trigram = nGram(3);
 
-},{}],101:[function(require,module,exports){
+},{}],102:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -33075,7 +33424,7 @@ function attacher() {
 
 module.exports = attacher;
 
-},{"franc":95,"nlcst-to-string":102,"unist-util-visit":103}],102:[function(require,module,exports){
+},{"franc":96,"nlcst-to-string":103,"unist-util-visit":104}],103:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -33134,7 +33483,7 @@ function nlcstToString(node, separator) {
 
 module.exports = nlcstToString;
 
-},{}],103:[function(require,module,exports){
+},{}],104:[function(require,module,exports){
 'use strict';
 
 /* Expose. */
@@ -33191,7 +33540,7 @@ function visit(tree, type, visitor, reverse) {
   }
 }
 
-},{}],104:[function(require,module,exports){
+},{}],105:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer.
@@ -33223,7 +33572,7 @@ module.exports = unified({
     'Compiler': Compiler
 });
 
-},{"./lib/compile.js":105,"parse-latin":107,"unified":134}],105:[function(require,module,exports){
+},{"./lib/compile.js":106,"parse-latin":108,"unified":135}],106:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer. All rights reserved.
@@ -33322,9 +33671,9 @@ Compiler.prototype.compile = compile;
 
 module.exports = Compiler;
 
-},{"nlcst-to-string":106}],106:[function(require,module,exports){
-arguments[4][102][0].apply(exports,arguments)
-},{"dup":102}],107:[function(require,module,exports){
+},{"nlcst-to-string":107}],107:[function(require,module,exports){
+arguments[4][103][0].apply(exports,arguments)
+},{"dup":103}],108:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -33339,7 +33688,7 @@ arguments[4][102][0].apply(exports,arguments)
 
 module.exports = require('./lib/parse-latin');
 
-},{"./lib/parse-latin":109}],108:[function(require,module,exports){
+},{"./lib/parse-latin":110}],109:[function(require,module,exports){
 /* This module is generated by `script/build-expressions.js` */
 'use strict'
 /* eslint-env commonjs */
@@ -33357,7 +33706,7 @@ module.exports = {
     'whiteSpace': /^(?:[\t-\r \x85\xA0\u1680\u2000-\u200A\u2028\u2029\u202F\u205F\u3000])+$/
 };
 
-},{}],109:[function(require,module,exports){
+},{}],110:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34128,7 +34477,7 @@ parseLatinPrototype.use('tokenizeRoot', [
 
 module.exports = ParseLatin;
 
-},{"./expressions":108,"./parser":110,"./plugin/break-implicit-sentences":111,"./plugin/make-final-white-space-siblings":112,"./plugin/make-initial-white-space-siblings":113,"./plugin/merge-affix-exceptions":114,"./plugin/merge-affix-symbol":115,"./plugin/merge-final-word-symbol":116,"./plugin/merge-initial-lower-case-letter-sentences":117,"./plugin/merge-initial-word-symbol":118,"./plugin/merge-initialisms":119,"./plugin/merge-inner-word-symbol":120,"./plugin/merge-non-word-sentences":121,"./plugin/merge-prefix-exceptions":122,"./plugin/merge-remaining-full-stops":123,"./plugin/merge-words":124,"./plugin/patch-position":125,"./plugin/remove-empty-nodes":126}],110:[function(require,module,exports){
+},{"./expressions":109,"./parser":111,"./plugin/break-implicit-sentences":112,"./plugin/make-final-white-space-siblings":113,"./plugin/make-initial-white-space-siblings":114,"./plugin/merge-affix-exceptions":115,"./plugin/merge-affix-symbol":116,"./plugin/merge-final-word-symbol":117,"./plugin/merge-initial-lower-case-letter-sentences":118,"./plugin/merge-initial-word-symbol":119,"./plugin/merge-initialisms":120,"./plugin/merge-inner-word-symbol":121,"./plugin/merge-non-word-sentences":122,"./plugin/merge-prefix-exceptions":123,"./plugin/merge-remaining-full-stops":124,"./plugin/merge-words":125,"./plugin/patch-position":126,"./plugin/remove-empty-nodes":127}],111:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34175,7 +34524,7 @@ function parserFactory(options) {
 
 module.exports = parserFactory;
 
-},{"./tokenizer":127}],111:[function(require,module,exports){
+},{"./tokenizer":128}],112:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34280,7 +34629,7 @@ function breakImplicitSentences(child, index, parent) {
 
 module.exports = modifyChildren(breakImplicitSentences);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-modify-children":132}],112:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-modify-children":133}],113:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34338,7 +34687,7 @@ function makeFinalWhiteSpaceSiblings(child, index, parent) {
 
 module.exports = modifyChildren(makeFinalWhiteSpaceSiblings);
 
-},{"unist-util-modify-children":132}],113:[function(require,module,exports){
+},{"unist-util-modify-children":133}],114:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34389,7 +34738,7 @@ function makeInitialWhiteSpaceSiblings(child, index, parent) {
 
 module.exports = visitChildren(makeInitialWhiteSpaceSiblings);
 
-},{"unist-util-visit-children":133}],114:[function(require,module,exports){
+},{"unist-util-visit-children":134}],115:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34479,7 +34828,7 @@ function mergeAffixExceptions(child, index, parent) {
 
 module.exports = modifyChildren(mergeAffixExceptions);
 
-},{"nlcst-to-string":106,"unist-util-modify-children":132}],115:[function(require,module,exports){
+},{"nlcst-to-string":107,"unist-util-modify-children":133}],116:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34574,7 +34923,7 @@ function mergeAffixSymbol(child, index, parent) {
 
 module.exports = modifyChildren(mergeAffixSymbol);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-modify-children":132}],116:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-modify-children":133}],117:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34668,7 +35017,7 @@ function mergeFinalWordSymbol(child, index, parent) {
 
 module.exports = modifyChildren(mergeFinalWordSymbol);
 
-},{"nlcst-to-string":106,"unist-util-modify-children":132}],117:[function(require,module,exports){
+},{"nlcst-to-string":107,"unist-util-modify-children":133}],118:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34770,7 +35119,7 @@ function mergeInitialLowerCaseLetterSentences(child, index, parent) {
 
 module.exports = modifyChildren(mergeInitialLowerCaseLetterSentences);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-modify-children":132}],118:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-modify-children":133}],119:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -34871,7 +35220,7 @@ function mergeInitialWordSymbol(child, index, parent) {
 
 module.exports = modifyChildren(mergeInitialWordSymbol);
 
-},{"nlcst-to-string":106,"unist-util-modify-children":132}],119:[function(require,module,exports){
+},{"nlcst-to-string":107,"unist-util-modify-children":133}],120:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35003,7 +35352,7 @@ function mergeInitialisms(child, index, parent) {
 
 module.exports = modifyChildren(mergeInitialisms);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-modify-children":132}],120:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-modify-children":133}],121:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35147,7 +35496,7 @@ function mergeInnerWordSymbol(child, index, parent) {
 
 module.exports = modifyChildren(mergeInnerWordSymbol);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-modify-children":132}],121:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-modify-children":133}],122:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35244,7 +35593,7 @@ function mergeNonWordSentences(child, index, parent) {
 
 module.exports = modifyChildren(mergeNonWordSentences);
 
-},{"unist-util-modify-children":132}],122:[function(require,module,exports){
+},{"unist-util-modify-children":133}],123:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35359,7 +35708,7 @@ function mergePrefixExceptions(child, index, parent) {
 
 module.exports = modifyChildren(mergePrefixExceptions);
 
-},{"nlcst-to-string":106,"unist-util-modify-children":132}],123:[function(require,module,exports){
+},{"nlcst-to-string":107,"unist-util-modify-children":133}],124:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35525,7 +35874,7 @@ function mergeRemainingFullStops(child) {
 
 module.exports = visitChildren(mergeRemainingFullStops);
 
-},{"../expressions":108,"nlcst-to-string":106,"unist-util-visit-children":133}],124:[function(require,module,exports){
+},{"../expressions":109,"nlcst-to-string":107,"unist-util-visit-children":134}],125:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35599,7 +35948,7 @@ function mergeFinalWordSymbol(child, index, parent) {
 
 module.exports = modifyChildren(mergeFinalWordSymbol);
 
-},{"unist-util-modify-children":132}],125:[function(require,module,exports){
+},{"unist-util-modify-children":133}],126:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35667,7 +36016,7 @@ function patchPosition(child, index, node) {
 
 module.exports = visitChildren(patchPosition);
 
-},{"unist-util-visit-children":133}],126:[function(require,module,exports){
+},{"unist-util-visit-children":134}],127:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35714,7 +36063,7 @@ function removeEmptyNodes(child, index, parent) {
 
 module.exports = modifyChildren(removeEmptyNodes);
 
-},{"unist-util-modify-children":132}],127:[function(require,module,exports){
+},{"unist-util-modify-children":133}],128:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2014-2015 Titus Wormer
@@ -35802,7 +36151,7 @@ function tokenizerFactory(childType, expression) {
 
 module.exports = tokenizerFactory;
 
-},{"nlcst-to-string":106}],128:[function(require,module,exports){
+},{"nlcst-to-string":107}],129:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -35869,7 +36218,7 @@ function iterate(values, callback, context) {
   }
 }
 
-},{"has":131}],129:[function(require,module,exports){
+},{"has":132}],130:[function(require,module,exports){
 var ERROR_MESSAGE = 'Function.prototype.bind called on incompatible ';
 var slice = Array.prototype.slice;
 var toStr = Object.prototype.toString;
@@ -35919,17 +36268,17 @@ module.exports = function bind(that) {
     return bound;
 };
 
-},{}],130:[function(require,module,exports){
+},{}],131:[function(require,module,exports){
 var implementation = require('./implementation');
 
 module.exports = Function.prototype.bind || implementation;
 
-},{"./implementation":129}],131:[function(require,module,exports){
+},{"./implementation":130}],132:[function(require,module,exports){
 var bind = require('function-bind');
 
 module.exports = bind.call(Function.call, Object.prototype.hasOwnProperty);
 
-},{"function-bind":130}],132:[function(require,module,exports){
+},{"function-bind":131}],133:[function(require,module,exports){
 'use strict';
 
 var iterate = require('array-iterate');
@@ -35966,7 +36315,7 @@ function wrapperFactory(callback) {
   }
 }
 
-},{"array-iterate":128}],133:[function(require,module,exports){
+},{"array-iterate":129}],134:[function(require,module,exports){
 'use strict';
 
 /* Expose. */
@@ -35991,7 +36340,7 @@ function visitorFactory(callback) {
   }
 }
 
-},{}],134:[function(require,module,exports){
+},{}],135:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -36286,7 +36635,7 @@ function unified(options) {
 
 module.exports = unified;
 
-},{"attach-ware":135,"bail":136,"extend":137,"node-extend":137,"unherit":138,"vfile":141,"ware":142}],135:[function(require,module,exports){
+},{"attach-ware":136,"bail":137,"extend":138,"node-extend":138,"unherit":139,"vfile":142,"ware":143}],136:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -36441,7 +36790,7 @@ function patch(Ware) {
 
 module.exports = patch;
 
-},{"unherit":138}],136:[function(require,module,exports){
+},{"unherit":139}],137:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -36477,7 +36826,7 @@ function bail(err) {
   }
 }
 
-},{}],137:[function(require,module,exports){
+},{}],138:[function(require,module,exports){
 'use strict';
 
 var hasOwn = Object.prototype.hasOwnProperty;
@@ -36565,7 +36914,7 @@ module.exports = function extend() {
 };
 
 
-},{}],138:[function(require,module,exports){
+},{}],139:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -36634,9 +36983,9 @@ function unherit(Super) {
   }
 }
 
-},{"inherits":139,"xtend":140}],139:[function(require,module,exports){
-arguments[4][86][0].apply(exports,arguments)
-},{"dup":86}],140:[function(require,module,exports){
+},{"inherits":140,"xtend":141}],140:[function(require,module,exports){
+arguments[4][87][0].apply(exports,arguments)
+},{"dup":87}],141:[function(require,module,exports){
 module.exports = extend
 
 var hasOwnProperty = Object.prototype.hasOwnProperty;
@@ -36657,7 +37006,7 @@ function extend() {
     return target
 }
 
-},{}],141:[function(require,module,exports){
+},{}],142:[function(require,module,exports){
 /**
  * @author Titus Wormer
  * @copyright 2015 Titus Wormer
@@ -37287,7 +37636,7 @@ proto.namespace = namespace;
 
 module.exports = VFile;
 
-},{}],142:[function(require,module,exports){
+},{}],143:[function(require,module,exports){
 /**
  * Module Dependencies
  */
@@ -37380,7 +37729,7 @@ Ware.prototype.run = function () {
   return this;
 };
 
-},{"wrap-fn":143}],143:[function(require,module,exports){
+},{"wrap-fn":144}],144:[function(require,module,exports){
 /**
  * Module Dependencies
  */
@@ -37507,7 +37856,7 @@ function once(fn) {
   };
 }
 
-},{"co":144}],144:[function(require,module,exports){
+},{"co":145}],145:[function(require,module,exports){
 
 /**
  * slice() reference.
@@ -37803,7 +38152,7 @@ function error(err) {
   });
 }
 
-},{}],145:[function(require,module,exports){
+},{}],146:[function(require,module,exports){
 /*!
  * jQuery JavaScript Library v3.1.1
  * https://jquery.com/
@@ -48025,7 +48374,7 @@ if ( !noGlobal ) {
 return jQuery;
 } );
 
-},{}],146:[function(require,module,exports){
+},{}],147:[function(require,module,exports){
 /*! nouislider - 9.1.0 - 2016-12-10 16:00:32 */
 
 (function (factory) {
@@ -50158,7 +50507,7 @@ function closure ( target, options, originalOptions ){
 	};
 
 }));
-},{}],147:[function(require,module,exports){
+},{}],148:[function(require,module,exports){
 var abbreviations;
 var englishAbbreviations = [
     "al",
@@ -50337,7 +50686,7 @@ exports.isBoundaryChar = function(word) {
            word === "?";
 };
 
-},{}],148:[function(require,module,exports){
+},{}],149:[function(require,module,exports){
 
 exports.endsWithChar = function ends_with_char(word, c) {
     if (c.length > 1) {
@@ -50350,7 +50699,7 @@ exports.endsWithChar = function ends_with_char(word, c) {
 exports.endsWith = function ends_with(word, end) {
     return word.slice(word.length - end.length) === end;
 };
-},{}],149:[function(require,module,exports){
+},{}],150:[function(require,module,exports){
 
 module.exports = function sanitizeHtml(text, opts) {
   // Strip HTML from Text using browser HTML parser
@@ -50367,7 +50716,7 @@ module.exports = function sanitizeHtml(text, opts) {
   return text;
 };
 
-},{}],150:[function(require,module,exports){
+},{}],151:[function(require,module,exports){
 /*jshint node:true, laxcomma:true */
 "use strict";
 
@@ -50596,11 +50945,11 @@ exports.sentences = function(text, user_options) {
     return result;
 };
 
-},{"./Match":147,"./String":148,"sanitize-html":149}],151:[function(require,module,exports){
+},{"./Match":148,"./String":149,"sanitize-html":150}],152:[function(require,module,exports){
 
-},{}],152:[function(require,module,exports){
-arguments[4][151][0].apply(exports,arguments)
-},{"dup":151}],153:[function(require,module,exports){
+},{}],153:[function(require,module,exports){
+arguments[4][152][0].apply(exports,arguments)
+},{"dup":152}],154:[function(require,module,exports){
 (function (global){
 /*!
  * The buffer module from node.js, for the browser.
@@ -52393,7 +52742,7 @@ function isnan (val) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"base64-js":154,"ieee754":155,"isarray":156}],154:[function(require,module,exports){
+},{"base64-js":155,"ieee754":156,"isarray":157}],155:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -52509,7 +52858,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],155:[function(require,module,exports){
+},{}],156:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
   var eLen = nBytes * 8 - mLen - 1
@@ -52595,14 +52944,14 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],156:[function(require,module,exports){
+},{}],157:[function(require,module,exports){
 var toString = {}.toString;
 
 module.exports = Array.isArray || function (arr) {
   return toString.call(arr) == '[object Array]';
 };
 
-},{}],157:[function(require,module,exports){
+},{}],158:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -52906,9 +53255,9 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],158:[function(require,module,exports){
-arguments[4][86][0].apply(exports,arguments)
-},{"dup":86}],159:[function(require,module,exports){
+},{}],159:[function(require,module,exports){
+arguments[4][87][0].apply(exports,arguments)
+},{"dup":87}],160:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -52931,7 +53280,7 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],160:[function(require,module,exports){
+},{}],161:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -53159,7 +53508,7 @@ var substr = 'ab'.substr(-1) === 'b'
 ;
 
 }).call(this,require('_process'))
-},{"_process":161}],161:[function(require,module,exports){
+},{"_process":162}],162:[function(require,module,exports){
 // shim for using process in browser
 var process = module.exports = {};
 
@@ -53341,10 +53690,10 @@ process.chdir = function (dir) {
 };
 process.umask = function() { return 0; };
 
-},{}],162:[function(require,module,exports){
+},{}],163:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":163}],163:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":164}],164:[function(require,module,exports){
 // a duplex stream is just a stream that is both readable and writable.
 // Since JS doesn't have multiple prototypal inheritance, this class
 // prototypally inherits from Readable, and then parasitically from
@@ -53420,7 +53769,7 @@ function forEach(xs, f) {
     f(xs[i], i);
   }
 }
-},{"./_stream_readable":165,"./_stream_writable":167,"core-util-is":170,"inherits":158,"process-nextick-args":172}],164:[function(require,module,exports){
+},{"./_stream_readable":166,"./_stream_writable":168,"core-util-is":171,"inherits":159,"process-nextick-args":173}],165:[function(require,module,exports){
 // a passthrough stream.
 // basically just the most minimal sort of Transform stream.
 // Every written chunk gets output as-is.
@@ -53447,7 +53796,7 @@ function PassThrough(options) {
 PassThrough.prototype._transform = function (chunk, encoding, cb) {
   cb(null, chunk);
 };
-},{"./_stream_transform":166,"core-util-is":170,"inherits":158}],165:[function(require,module,exports){
+},{"./_stream_transform":167,"core-util-is":171,"inherits":159}],166:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -54391,7 +54740,7 @@ function indexOf(xs, x) {
   return -1;
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":163,"./internal/streams/BufferList":168,"_process":161,"buffer":153,"buffer-shims":169,"core-util-is":170,"events":157,"inherits":158,"isarray":171,"process-nextick-args":172,"string_decoder/":179,"util":152}],166:[function(require,module,exports){
+},{"./_stream_duplex":164,"./internal/streams/BufferList":169,"_process":162,"buffer":154,"buffer-shims":170,"core-util-is":171,"events":158,"inherits":159,"isarray":172,"process-nextick-args":173,"string_decoder/":180,"util":153}],167:[function(require,module,exports){
 // a transform stream is a readable/writable stream where you do
 // something with the data.  Sometimes it's called a "filter",
 // but that's not a great name for it, since that implies a thing where
@@ -54574,7 +54923,7 @@ function done(stream, er, data) {
 
   return stream.push(null);
 }
-},{"./_stream_duplex":163,"core-util-is":170,"inherits":158}],167:[function(require,module,exports){
+},{"./_stream_duplex":164,"core-util-is":171,"inherits":159}],168:[function(require,module,exports){
 (function (process){
 // A bit simpler than readable streams.
 // Implement an async ._write(chunk, encoding, cb), and it'll handle all
@@ -55131,7 +55480,7 @@ function CorkedRequest(state) {
   };
 }
 }).call(this,require('_process'))
-},{"./_stream_duplex":163,"_process":161,"buffer":153,"buffer-shims":169,"core-util-is":170,"events":157,"inherits":158,"process-nextick-args":172,"util-deprecate":173}],168:[function(require,module,exports){
+},{"./_stream_duplex":164,"_process":162,"buffer":154,"buffer-shims":170,"core-util-is":171,"events":158,"inherits":159,"process-nextick-args":173,"util-deprecate":174}],169:[function(require,module,exports){
 'use strict';
 
 var Buffer = require('buffer').Buffer;
@@ -55196,7 +55545,7 @@ BufferList.prototype.concat = function (n) {
   }
   return ret;
 };
-},{"buffer":153,"buffer-shims":169}],169:[function(require,module,exports){
+},{"buffer":154,"buffer-shims":170}],170:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -55308,7 +55657,7 @@ exports.allocUnsafeSlow = function allocUnsafeSlow(size) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"buffer":153}],170:[function(require,module,exports){
+},{"buffer":154}],171:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -55419,9 +55768,9 @@ function objectToString(o) {
 }
 
 }).call(this,{"isBuffer":require("../../../../insert-module-globals/node_modules/is-buffer/index.js")})
-},{"../../../../insert-module-globals/node_modules/is-buffer/index.js":159}],171:[function(require,module,exports){
-arguments[4][156][0].apply(exports,arguments)
-},{"dup":156}],172:[function(require,module,exports){
+},{"../../../../insert-module-globals/node_modules/is-buffer/index.js":160}],172:[function(require,module,exports){
+arguments[4][157][0].apply(exports,arguments)
+},{"dup":157}],173:[function(require,module,exports){
 (function (process){
 'use strict';
 
@@ -55468,7 +55817,7 @@ function nextTick(fn, arg1, arg2, arg3) {
 }
 
 }).call(this,require('_process'))
-},{"_process":161}],173:[function(require,module,exports){
+},{"_process":162}],174:[function(require,module,exports){
 (function (global){
 
 /**
@@ -55539,10 +55888,10 @@ function config (name) {
 }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],174:[function(require,module,exports){
+},{}],175:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":164}],175:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":165}],176:[function(require,module,exports){
 (function (process){
 var Stream = (function (){
   try {
@@ -55562,13 +55911,13 @@ if (!process.browser && process.env.READABLE_STREAM === 'disable' && Stream) {
 }
 
 }).call(this,require('_process'))
-},{"./lib/_stream_duplex.js":163,"./lib/_stream_passthrough.js":164,"./lib/_stream_readable.js":165,"./lib/_stream_transform.js":166,"./lib/_stream_writable.js":167,"_process":161}],176:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":164,"./lib/_stream_passthrough.js":165,"./lib/_stream_readable.js":166,"./lib/_stream_transform.js":167,"./lib/_stream_writable.js":168,"_process":162}],177:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":166}],177:[function(require,module,exports){
+},{"./lib/_stream_transform.js":167}],178:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":167}],178:[function(require,module,exports){
+},{"./lib/_stream_writable.js":168}],179:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -55697,18 +56046,18 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":157,"inherits":158,"readable-stream/duplex.js":162,"readable-stream/passthrough.js":174,"readable-stream/readable.js":175,"readable-stream/transform.js":176,"readable-stream/writable.js":177}],179:[function(require,module,exports){
-arguments[4][88][0].apply(exports,arguments)
-},{"buffer":153,"dup":88}],180:[function(require,module,exports){
-arguments[4][86][0].apply(exports,arguments)
-},{"dup":86}],181:[function(require,module,exports){
+},{"events":158,"inherits":159,"readable-stream/duplex.js":163,"readable-stream/passthrough.js":175,"readable-stream/readable.js":176,"readable-stream/transform.js":177,"readable-stream/writable.js":178}],180:[function(require,module,exports){
+arguments[4][89][0].apply(exports,arguments)
+},{"buffer":154,"dup":89}],181:[function(require,module,exports){
+arguments[4][87][0].apply(exports,arguments)
+},{"dup":87}],182:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],182:[function(require,module,exports){
+},{}],183:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -56298,4 +56647,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":181,"_process":161,"inherits":180}]},{},[13]);
+},{"./support/isBuffer":182,"_process":162,"inherits":181}]},{},[14]);
