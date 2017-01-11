@@ -1170,13 +1170,13 @@ body {\
 
 		var _rSetts = null;
 		var defaultSettings = {
-			wpm: 500,
+			wpm: 			500,
 			slowStartDelay: 5,
-			sentenceDelay: 2.5,
+			sentenceDelay: 	2.5,
 			otherPuncDelay: 1.5,
 			shortWordDelay: 1.3,
-			longWordDelay: 1.4,
-			numericDelay: 2.0
+			longWordDelay: 	1.4,
+			numericDelay: 	2.0
 		};
 
 
@@ -1209,22 +1209,22 @@ body {\
 
 		rDel.calcDelay = function ( frag, justOnce ) {
 			var delay = rDel.delay;
-console.log('1:', delay )
+
 			// var frag  = rDel._currentWordFragment;  // Current word fragment
 			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
 			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
 			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
 			if ( frag.isLong() ) 	 delay *= _rSetts.longWordDelay;
 			if ( frag.isNumeric ) 	 delay *= _rSetts.numericDelay;
-console.log('2:', delay, rDel._tempSlowStart )
-			// Speeds up a big each time the loop is called
-			var extraDelay = rDel._tempSlowStart;
 
+			// Just after starting up again, go slowly, then speed up a bit
+			// each time the loop is called
+			var extraDelay = rDel._tempSlowStart;
 			// Make sure startDelay isn't used up by things like .once() called
-			// repeatedly, like with scrubber
+			// repeatedly, like when the scrubber is moved.
 			if (!justOnce) {rDel._tempSlowStart = Math.max( 1, extraDelay / 1.5 );}
 			delay = delay * rDel._tempSlowStart;
-console.log('3:', delay )
+
 			return delay;
 		};  // End rDel.calcDelay()
 
@@ -1248,91 +1248,64 @@ console.log('3:', delay )
 
 		// ============== SET OPTIONS ============== \\
 
-		rDel._withinLimits = function ( val, min, max ) {
-			var minLimited = Math.max( min, val );
-			return Math.min( max, minLimited );
-		};
-
 		// Not needed, but might be nice to have:
 		rDel.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
 						'longWordDelay', 'numericDelay', 'slowStartDelay'];
 
-		// TODO: Just make this a function, no events?
-		// Event based settings changes
 		rDel.set = function ( operation, value) {
 			// If we just go off of lowercase, we can remove at
 			// least some typo mistakes and uncertainties
 			var op 	= '_set' + operation.toLowerCase();
 			var val = rDel[ op ]( value );
 			storage.set( { operation: val } );  // Should this be all lowercase too?
-			console.log('setting', op, 'to', val )
+
 			return rDel;
 		};  // End rDel.set()
 
 
-		// atm, giving them two kinds of friendly names
+
+		rDel._withinLimits = function ( val, min, max ) {
+			var minLimited = Math.max( min, val );
+			return Math.min( max, minLimited );
+		};
+
+		rDel._toUsefulVal = function ( val, min, max ) {
+			var num = parseFloat(val);
+			return rDel._withinLimits( num, min, max );
+		};
+
+
+
 		rDel._setwpm = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 5000 );
-			// val = Math.max (1, val);
-			// val = Math.min (5000, val);
-			_rSetts.wpm = val;
-			rDel.delay = 1/(val/60)*1000;  // What is this based on?
-			return val;
+			_rSetts.wpm = rDel._toUsefulVal( val, 1, 5000 );
+			rDel.delay = 1/(_rSetts.wpm/60)*1000;
+			return _rSetts.wpm;
 		};
 
+		// ??: What do these numbers mean? It's not milliseconds, that's for sure.
 		rDel._setslowstartdelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 0, 10 );
-			// val = Math.max(0,val);
-			// val = Math.min(10,val);
-			_rSetts.slowStartDelay = val;
-			return val;
+			_rSetts.slowStartDelay = rDel._toUsefulVal( val, 0, 10 );
+			return _rSetts.slowStartDelay;
 		};
-
 		rDel._setsentencedelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 10 );
-			// val = Math.max (1, val);
-			// val = Math.min (10, val);
-			_rSetts.sentenceDelay = val;
-			return val;
+			_rSetts.sentenceDelay = rDel._toUsefulVal( val, 1, 10 );
+			return _rSetts.sentenceDelay;
 		};
-
 		rDel._setotherpuncdelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 10 );
-			// val = Math.max (1, val);
-			// val = Math.min (10, val);
-			_rSetts.otherPuncDelay = val;
-			return val;
+			_rSetts.otherPuncDelay = rDel._toUsefulVal( val, 1, 10 );
+			return _rSetts.otherPuncDelay;
 		};
-
 		rDel._setshortworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 10 );
-			// val = Math.max (1, val);
-			// val = Math.min (10, val);
-			_rSetts.shortWordDelay = val;
-			return val;
+			_rSetts.shortWordDelay = rDel._toUsefulVal( val, 1, 10 );
+			return _rSetts.shortWordDelay;
 		};
-
 		rDel._setlongworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 10 );
-			// val = Math.max (1, val);
-			// val = Math.min (10, val);
-			_rSetts.longWordDelay = val;
-			return val;
+			_rSetts.longWordDelay = rDel._toUsefulVal( val, 1, 10 );
+			return _rSetts.longWordDelay;
 		};
-
 		rDel._setnumericdelay = function ( val ) {
-			val = parseFloat(val);
-			val = rDel._withinLimits( val, 1, 10 );
-			// val = Math.max (1, val);
-			// val = Math.min (10, val);
-			_rSetts.numericDelay = val;
-			return val;
+			_rSetts.numericDelay = rDel._toUsefulVal( val, 1, 10 );
+			return _rSetts.numericDelay;
 		};
 
         // ============== DO IT ============== \\
@@ -1386,13 +1359,6 @@ console.log('3:', delay )
 		var controls;  // We'll see how this one shapes up
 		var restart;
 
-		// Why is this here? Because it's going to be a rewind/fastforward
-		// control in the future
-		// ??: Buttons? noUiSlider?
-// 		var progStr = '<div id="__rdly_progress">\
-// 	<div id="__rdly_percent_done"></div>\
-// 	<div id="__rdly_scrubber"></div>\
-// </div>';
 		var progStr = '<div id="__rdly_progress"></div>';
 
 		var indicatorStr 	= '<div id="__rdly_indicator" class="__rdly-transform-centered"></div>',
@@ -1536,6 +1502,7 @@ console.log('3:', delay )
 
 
 		rPUI.keyInput = function ( evnt ) {
+			// (currently sentence nav tests)
 			if ( evnt.keyCode === 39 ) {
 				timer.pause();
 				queue.nextSentence();
@@ -1652,23 +1619,25 @@ console.log('3:', delay )
 },{"./playback-CSS":9,"jquery":146,"nouislider":147}],8:[function(require,module,exports){
 /* ReaderlyTimer.js
 * 
-* Handles passing out the fragments from Queue in a manner
-* defined by its settings, which can change.
+* Transmits fragments from Queue. Uses `delayer` to determine time
+* between each transmition.
 * 
 * Based on https://github.com/jamestomasino/read_plugin/blob/master/Read.js
 * 
 * TODO;
 * - ??: Make length delay proportional to word length?
-* - Add extra paragraph pause back in
 * - Long word delay not working? How about otherPunc? And do more
 * 	symbols need to be included in that set of otherPunc?
 * - Implement more robust pausing (store in bool and wait for appropriate time)
+* 
+* DONE:
+* - Add extra paragraph pause back in
 * - Scrubbing doesn't restart the slow-start value
 * 
 * NOTES:
 * - Always return Timer so functions can be chained
-* - Always send Timer as the first argument as events to
-* stay consistent.
+* - Always send Timer as the first argument to events to
+* 	stay consistent.
 */
 
 (function (root, timerFactory) {  // root is usually `window`
@@ -1689,63 +1658,27 @@ console.log('3:', delay )
 
 	"use strict";
 
-	var ReaderlyTimer = function ( delayer, settings, storage ) {
-	/* ( {}, {} ) -> other {}
+	var ReaderlyTimer = function ( delayer ) {
+	/* ( {}, {} ) -> ReaderlyTimer
 	* 
 	*/
 		var rTim = {};
 
-		var _rSetts = null;
-		var defaultSettings = {
-			wpm: 500,
-			slowStartDelay: 5,
-			sentenceDelay: 2.5,
-			otherPuncDelay: 1.5,
-			shortWordDelay: 1.3,
-			longWordDelay: 1.4,
-			numericDelay: 2.0
-		};
+		rTim._init = function () {
 
-
-		rTim._setUp = function ( settings ) {
-
-			rTim.progress 				= 0;
 			rTim._currentWordFragment 	= null;
 
-			// Defaults
 			rTim.done 		 = false;
-			rTim.delay 		 = 0;
+			rTim.progress 	 = 0;
 
 			rTim._timeout 	 = null;
 			rTim._isPlaying  = false;
 			rTim._wasPlaying = false;
 			rTim._goToEngaged 	 = false;
-			rTim._stepOperation  = 'next';
-			rTim._tempStartDelay = 0;
-
-
-			// defaultSettings = settings || defaultSettings;
-
-			var wpm 			= settings.wpm 				|| defaultSettings.wpm,
-				slowStartDelay 	= settings.slowStartDelay 	|| defaultSettings.slowStartDelay,
-				sentenceDelay 	= settings.sentenceDelay 	|| defaultSettings.sentenceDelay,
-				otherPuncDelay 	= settings.otherPuncDelay 	|| defaultSettings.otherPuncDelay,
-				shortWordDelay 	= settings.shortWordDelay 	|| defaultSettings.shortWordDelay,
-				longWordDelay 	= settings.longWordDelay 	|| defaultSettings.longWordDelay,
-				numericDelay 	= settings.numericDelay 	|| defaultSettings.numericDelay;
-
-			// Update settings based on what's passed in
-			_rSetts = rTim._settings = {};
-			rTim.setwpm( wpm )
-				.setslowstartdelay( slowStartDelay )
-				.setsentencedelay( sentenceDelay )
-				.setotherpuncdelay( otherPuncDelay )
-				.setshortworddelay( shortWordDelay )
-				.setlongworddelay( longWordDelay )
-				.setnumericdelay( numericDelay );
+			rTim._progressOperation  = 'next';
 
 			return rTim;
-		};  // End rTim._setUp()
+		};  // End rTim._init()
 
 
 		rTim.getProgress = function () {
@@ -1798,7 +1731,6 @@ console.log('3:', delay )
 
 			// Start slow when next go through loop (restore countdown)
 			var delayMod = startDelayModFunc || rTim._noDelayMod;
-			// rTim._tempStartDelay = delayMod( _rSetts.slowStartDelay );
 			var delay 	 = delayMod( delayer._settings.slowStartDelay );
 			delayer.resetSlowStart( delay );
 
@@ -1824,7 +1756,7 @@ console.log('3:', delay )
 		* ??: Just one eventName which gets + 'Begin' and + 'Finish' where appropriate?
 		*/
 			// "play" will always be forward. "rewind" can be play, but with "prev".
-			rTim._stepOperation = 'next';
+			rTim._progressOperation = 'next';
 
 			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
 			
@@ -1851,7 +1783,6 @@ console.log('3:', delay )
 
 			// Start slow when next go through loop (restore countdown)
 			var delayMod = startDelayModFunc || rTim._noDelayMod;
-			// rTim._tempStartDelay = delayMod( _rSetts.slowStartDelay );
 			var delay 	 = delayMod( delayer._settings.slowStartDelay );
 			delayer.resetSlowStart( delay );
 
@@ -1863,7 +1794,6 @@ console.log('3:', delay )
 		rTim.play = function () {
 			if ( rTim.done ) { rTim.restart(); }
 			else { rTim._play( 'playBegin', 'playFinish' ); }
-
 			return rTim;
 		};  // End rTim.play()
 
@@ -1879,7 +1809,7 @@ console.log('3:', delay )
 		};
 		rTim.close = function () {
 		// Just another name for .pause() that people may want
-			rTim.pause( 'closeBegin', 'closeFinish', null );
+			rTim._pause( 'closeBegin', 'closeFinish', null );
 			return rTim;
 		};
 
@@ -1905,7 +1835,7 @@ console.log('3:', delay )
 				}
 
 				rTim._queue.goTo( playbackObj );
-				rTim._stepOperation = 'current';
+				rTim._progressOperation = 'current';
 				rTim.once();
 			}
 			return rTim;
@@ -1918,27 +1848,9 @@ console.log('3:', delay )
 		};
 
 
-		rTim.calcDelay = function ( frag, justOnce ) {
-			var delay = rTim.delay;
-
-			// var frag  = rTim._currentWordFragment;  // Current word fragment
-			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
-			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
-			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
-			if ( frag.isLong() ) 	 delay *= _rSetts.longWordDelay;
-			if ( frag.isNumeric ) 	 delay *= _rSetts.numericDelay;
-
-			// Speeds up a big each time the loop is called
-			var extraDelay 		 = rTim._tempStartDelay;
-
-			// Make sure startDelay isn't used up by things like .once() called
-			// repeatedly, like with scrubber
-			if (!justOnce) {rTim._tempStartDelay = Math.max( 1, extraDelay / 1.5 );}
-			delay = delay * rTim._tempStartDelay;
-
-			return delay;
-		};  // End rTim.calcDelay()
-
+		// ================================
+		// LOOPS
+		// ================================
 		rTim._loop = function ( justOnce ) {
 
 			var progress = rTim.progress = rTim.getProgress();
@@ -1955,7 +1867,7 @@ console.log('3:', delay )
 			$(rTim).trigger( 'loopBegin', [rTim] );
 
 			// "next", "prev", or "current" word fragment
-			rTim._currentWordFragment = rTim._queue[ rTim._stepOperation ]();
+			rTim._currentWordFragment = rTim._queue[ rTim._progressOperation ]();
 			var delay = delayer.calcDelay( rTim._currentWordFragment, justOnce );
 			if ( !justOnce ) { rTim._timeout = setTimeout( rTim._loop, delay ); }
 
@@ -1975,92 +1887,8 @@ console.log('3:', delay )
 
 
 
-		// ============== SET OPTIONS ============== \\
-		// Not needed, but might be nice to have:
-		rTim.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
-						'longWordDelay', 'numericDelay', 'slowStartDelay'];
-
-		// TODO: Just make this a function, no events?
-		// Event based settings changes
-		rTim.set = function (evnt, operation, value) {
-			// All these have lower-case versions - more consistency for event use?
-			var op = operation.toLowerCase();
-			if (op.indexOf('set') < 0) { op = 'set' + op; }
-
-			rTim[ op ]( value );
-			return rTim;
-		};  // End rTim.set()
-
-		$(rTim).on('set', rTim.set);
-
-
-		// atm, giving them two kinds of friendly names
-		rTim.setWPM = rTim.setwpm = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (5000, val);
-			_rSetts.wpm = val;
-			storage.set( { 'wpm': val } )
-			rTim.delay = 1/(val/60)*1000;  // What is this based on?
-			return rTim;
-		};
-
-		rTim.setSlowStartDelay = rTim.setslowstartdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max(0,val);
-			val = Math.min(10,val);
-			_rSetts.slowStartDelay = val;
-			storage.set( { 'slowStartDelay': val } )
-			return rTim;
-		};
-
-		rTim.setSentenceDelay = rTim.setsentencedelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.sentenceDelay = val;
-			storage.set( { 'sentenceDelay': val } )
-			return rTim;
-		};
-
-		rTim.setOtherPuncDelay = rTim.setotherpuncdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.otherPuncDelay = val;
-			storage.set( { 'otherPuncDelay': val } )
-			return rTim;
-		};
-
-		rTim.setShortWordDelay = rTim.setshortworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.shortWordDelay = val;
-			storage.set( { 'shortWordDelay': val } )
-			return rTim;
-		};
-
-		rTim.setLongWordDelay = rTim.setlongworddelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.longWordDelay = val;
-			storage.set( { 'longWordDelay': val } )
-			return rTim;
-		};
-
-		rTim.setNumericDelay = rTim.setnumericdelay = function ( val ) {
-			val = parseFloat(val);
-			val = Math.max (1, val);
-			val = Math.min (10, val);
-			_rSetts.numericDelay = val;
-			storage.set( { 'numericDelay': val } )
-			return rTim;
-		};
-
         // ============== DO IT ============== \\
-		rTim._setUp( settings )
+		rTim._init()
 		return rTim;
 	};  // End ReaderlyTimer() -> {}
 
