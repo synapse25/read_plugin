@@ -414,7 +414,7 @@
 
         qu.next = qu.nextWord = function () {
 
-            qu.index    = Math.min( qu.index + 1, qu.positions.length );
+            qu.index    = Math.min( qu.index + 1, qu.positions.length - 1 );
             var pos     = qu.positions[ qu.index ];
             // Unfortunately, this means that .index doesn't exactly represent what was just shown...
             // ??: What up with that?
@@ -467,10 +467,15 @@
 
         qu.prevSentence = function () {
             var pos     = qu.position,
-                senti   = pos.sentence - 1;
+                senti   = pos.sentence;
 
+            // If we're in the middle of a sentence, go back
+            // to the beginning the sentence. Otherwise, go
+            // to the previous sentence.
+            if ( pos.fragment === 0 ) { senti -= 1; }
+                
             pos.sentence = Math.max( senti, 0 );
-            pos.fragment = 0;  // -1 will only work for the 'next' operation...
+            pos.fragment = 0;
             qu.index     = qu.getIndex( pos );
 
             return qu.getFragment( qu.position );
@@ -483,7 +488,7 @@
             senti = Math.min( senti, (qu.sentenceFragments.length - 1) );
             senti = Math.max( senti, 0 );
             pos.sentence = senti;
-            pos.fragment = 0;  // -1 will only work for the 'next' operation...
+            pos.fragment = 0;
             qu.index     = qu.getIndex( pos );
 
             return qu.getFragment( qu.position );
@@ -1520,13 +1525,13 @@ body {\
 
 
 		rPUI.keyInput = function ( evnt ) {
+
+			var keyCode = evnt.keyCode || evnt.which || evnt.charCode;
+
 			// (currently sentence nav tests)
-			console.log( evnt.keyCode );
-			if ( evnt.keyCode === 39 ) {
-				// timer.pause();
-				timer.nextSentence();
-				// setTimeout( timer.play, 200 );
-			}
+			console.log( keyCode );
+			if ( keyCode === 39 ) { timer.nextSentence(); }
+			else if ( keyCode === 37 ) { timer.prevSentence(); }
 			return rPUI;
 		};
 
@@ -1840,6 +1845,7 @@ body {\
 
 
 		rTim.nextSentence = function() {
+
 			rTim._wasPlaying = rTim._isPlaying;
 			rTim._pause( null, null, null );
 
@@ -1847,6 +1853,22 @@ body {\
 			rTim.once( 'current' );
 
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
+
+			return rTim;
+		};
+
+
+		rTim._rewindStart = null;
+		rTim.prevSentence = function() {
+
+			rTim._wasPlaying = rTim._isPlaying;
+			rTim._pause( null, null, null );
+
+			rTim._queue.prevSentence();
+			rTim.once( 'current' );
+
+			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
+
 			return rTim;
 		};
 
@@ -1899,9 +1921,7 @@ body {\
 
 			// "next", "prev", or "current" word fragment
 			// If calling the loop from the loop, just keep going in the same direction as before
-			// console.log( '1:', progressOp, rTim._progressOperation )
 			progressOp 	= progressOp || rTim._progressOperation;
-			// console.log( '2:', progressOp )
 			var frag  	= rTim._queue[ progressOp ](),
 				delay 	= delayer.calcDelay( frag, Boolean(callback) );  // TODO: for ff modify delay
 
