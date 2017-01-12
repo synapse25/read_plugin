@@ -469,9 +469,9 @@
             var pos     = qu.position,
                 senti   = pos.sentence;
 
-            // If we're in the middle of a sentence, go back
-            // to the beginning the sentence. Otherwise, go
-            // to the previous sentence.
+            // If we're in the middle of a sentence, go back to the
+            // beginning the sentence. Otherwise, go to the previous
+            // sentence. ??: Should the behavior really be here?
             if ( pos.fragment === 0 ) { senti -= 1; }
                 
             pos.sentence = Math.max( senti, 0 );
@@ -1369,6 +1369,9 @@ body {\
 
 		var rPUI = {};
 
+		rPUI.modifierKeysDown = [];
+		rPUI.sentenceModifierKey = 18;  // 'alt'
+
 		rPUI.isPlaying 	 = false;
 		rPUI.isScrubbing = false;
 		rPUI.nodes 		 = {};
@@ -1524,14 +1527,40 @@ body {\
 		};  // End rPUI._stopScrubbing()
 
 
-		rPUI.keyInput = function ( evnt ) {
+		rPUI.keyUp = function ( evnt ) {
 
 			var keyCode = evnt.keyCode || evnt.which || evnt.charCode;
+			var smod 	= rPUI.sentenceModifierKey;
 
-			// (currently sentence nav tests)
-			console.log( keyCode );
-			if ( keyCode === 39 ) { timer.nextSentence(); }
-			else if ( keyCode === 37 ) { timer.prevSentence(); }
+			// Modifier keys
+			if ( keyCode === smod ) {
+
+				var smodi = rPUI.modifierKeysDown.indexOf( smod );
+				if ( smodi > -1 ) { rPUI.modifierKeysDown.splice( smodi ) }
+			}
+
+			return rPUI;
+		};
+
+
+		rPUI.keyDown = function ( evnt ) {
+
+			var keyCode = evnt.keyCode || evnt.which || evnt.charCode;
+			var smod = rPUI.sentenceModifierKey;
+
+			// Modifier keys
+			if ( keyCode === smod && rPUI.modifierKeysDown.indexOf( smod ) === -1 ) {
+				rPUI.modifierKeysDown.push( smod )
+			}
+
+			if ( rPUI.modifierKeysDown.indexOf( smod ) > -1 ) {
+				if ( keyCode === 39 ) { timer.nextSentence(); }
+				else if ( keyCode === 37 ) { timer.prevSentence(); }
+			} else {
+				if ( keyCode === 39 ) { timer.nextWord(); }
+				else if ( keyCode === 37 ) { timer.prevWord(); }
+			}
+
 			return rPUI;
 		};
 
@@ -1579,14 +1608,19 @@ body {\
 
 			// Keyboard input
 			// Arrow keys only listen to the keydown event
-			$(document.body).on( 'keydown', rPUI.keyInput );
-			$(coreDisplay.nodes.doc).on( 'keydown', rPUI.keyInput );
+			$(document.body).on( 'keydown', rPUI.keyDown );
+			$(coreDisplay.nodes.doc).on( 'keydown', rPUI.keyDown );
+			$(document.body).on( 'keyup', rPUI.keyUp );
+			$(coreDisplay.nodes.doc).on( 'keyup', rPUI.keyUp );
 
 			return rPUI;
 		};
 
 
 		rPUI._init = function ( coreDisplay ) {
+
+			rPUI.modifierKeysDown = [];  // TODO: Empty non-destructively
+			rPUI.sentenceModifierKey = 18;  // 'alt' TODO: Modifiable?
 
 			progressNode = nodes.progressNode = $(progStr)[0];
 			rPUI._progressSlider( progressNode );
@@ -1692,7 +1726,6 @@ body {\
 		rTim._init = function () {
 
 			rTim.done 		 = false;
-			rTim.progress 	 = 0;
 
 			rTim._timeout 	 = null;
 			rTim._isPlaying  = false;
@@ -1704,9 +1737,11 @@ body {\
 		};  // End rTim._init()
 
 
+
+		// ============== PASSED ON DIRECTLY FROM QUEUE ============== \\
+
 		rTim.getProgress = function () {
-			rTim.progress = rTim._queue.getProgress();
-			return rTim.progress;
+			return rTim._queue.getProgress();
 		};  // End rTim.gesProsress()
 
 
@@ -1844,12 +1879,12 @@ body {\
 		};
 
 
-		rTim.nextSentence = function() {
+		rTim._progression = function ( op ) {
 
 			rTim._wasPlaying = rTim._isPlaying;
 			rTim._pause( null, null, null );
 
-			rTim._queue.nextSentence();
+			rTim._queue[ op ]();
 			rTim.once( 'current' );
 
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
@@ -1858,17 +1893,34 @@ body {\
 		};
 
 
-		rTim._rewindStart = null;
+		rTim._next = function ( type ) {
+		// `type` must have a capital first letter
+			var op = 'next' + type;
+			rTim._progression( op );
+			return rTim;
+		};
+		rTim.nextWord = function () {
+			rTim._next( 'Word' );
+			return rTim;
+		};
+		rTim.nextSentence = function() {
+			rTim._next( 'Sentence' );
+			return rTim;
+		};
+
+
+		rTim._prev = function ( type ) {
+		// `type` must have a capital first letter
+			var op = 'prev' + type;
+			rTim._progression( op );
+			return rTim;
+		};
+		rTim.prevWord = function () {
+			rTim._prev( 'Word' );
+			return rTim;
+		};
 		rTim.prevSentence = function() {
-
-			rTim._wasPlaying = rTim._isPlaying;
-			rTim._pause( null, null, null );
-
-			rTim._queue.prevSentence();
-			rTim.once( 'current' );
-
-			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
-
+			rTim._prev( 'Sentence' );
 			return rTim;
 		};
 
@@ -1906,7 +1958,7 @@ body {\
 		rTim._loop = function ( progressOp, callback ) {
 		// If no callback, loop continues
 
-			var progress = rTim.progress = rTim.getProgress();
+			var progress = rTim.getProgress();
 			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index, rTim._queue.positions.length - 1] );
 
 			// Stop if we've reached the end
