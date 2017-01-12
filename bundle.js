@@ -245,8 +245,8 @@
         qu.sentences = null;
         qu.sentenceFragments = [];
         qu.fragments = [];
-        qu.index     = -1;
-        qu.index2    = [ 0, -1 ];
+        qu.index     = 0;
+        qu.index2    = [ 0, 0 ];
         // Since data will be in arrays of sentences with words, this will
         // tell us which index corresponds to which sentence/word position
         qu.positions = [];
@@ -265,8 +265,8 @@
 
             var sFrags   = qu.sentenceFragments = [];  // Array of arrays of fragment objects (for now)
             qu.fragments = [];
-            qu.index     = -1;
-            qu.index2    = [ 0, -1 ];
+            qu.index     = 0;
+            qu.index2    = [ 0, 0 ];
             qu.positions = [];
 
             for ( let senti = 0; senti < sentences.length; senti++ ) {
@@ -366,21 +366,40 @@
 
 
         // ========= RUNTIME: TRAVELING THE QUEUE (for external use) ========= \\
-        qu.getFrag = function ( pos ) {
+        qu.getFragment = function ( posOrIndex ) {
+        // Either a position or an index can be passed in
+            var pos = null;
+            if ( typeof pos === 'number' ) {
+                pos = qu.positions[ posOrIndex ]
+            } else {
+                pos = posOrIndex;
+            }
+
             var frag = qu.sentenceFragments[ pos.sentence ].fragments[ pos.fragment ];
             return frag;
         };
 
         qu.getIndex = function ( posToTest ) {
-            console.log('position:', posToTest, 'positions:', qu.positions)
+            // console.log('position to test for:', posToTest)
+            // console.log('position:', posToTest, 'positions:', qu.positions)
             var index = qu.positions.findIndex( function matchPositionToIndex( pos ) {
-                console.log( pos );
+                // console.log( pos );
                 var sent = pos.sentence === posToTest.sentence,
                     frag = pos.fragment === posToTest.fragment;
                 return sent && frag;
             });
-            console.log(index)
+            // console.log( 'index found:', index)
             return index;
+        };
+
+        qu.getPosition = function ( index ) {
+            return qu.positions[ index ];
+        };
+
+
+        qu.neutralizeIndex = function ( index ) {
+            index = Math.min( index, qu.positions.length - 1 );  // max
+            return Math.max( index, 0 );  // min
         };
 
         // qu.getSentence = function ( pos ) {
@@ -396,7 +415,7 @@
         qu.next = qu.nextWord = function () {
 
             // if ( qu.getProgress() >= 1 ) {
-            //     return qu.getFrag( qu.index );
+            //     return qu.getFragment( qu.index );
             // }
 
             // var pos       = qu.position,
@@ -421,18 +440,20 @@
             //     incremented.word = 0;
             //     potential;
             // }
-            qu.index    = Math.min( qu.index + 1, qu.positions.length - 1 );
-            var pos     = qu.positions[ qu.index ];
+            qu.index    = Math.min( qu.index + 1, qu.positions.length );  // no length - 1 because of -1 next line
+            var pos     = qu.positions[ qu.index - 1 ];  // -1 so we can get the first word
+            // qu.index    = Math.min( qu.index + 1, qu.positions.length - 1 );
+            // var pos     = qu.positions[ qu.index ];
             qu.position = { sentence: pos.sentence, fragment: pos.fragment };
             // console.log( qu.position, qu.index );
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };
 
         qu.prev = qu.prevWord = function () {
             qu.index    = Math.max( qu.index - 1, 0 );
             var pos     = qu.positions[ qu.index ];
             qu.position = { sentence: pos.sentence, fragment: pos.fragment };
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };
 
         qu.current = qu.currentWord = function() {
@@ -441,15 +462,18 @@
             qu.index    = Math.min( index, qu.positions.length - 1 );
             var pos     = qu.positions[ index ];
             qu.position = { sentence: pos.sentence, fragment: pos.fragment };
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };
 
         qu.nextSentence = function () {
+            console.log('~~~NEXT SENTENCE~~~')
+            console.log('old pos:', qu.position )
             var pos     = qu.position,
                 senti   = pos.sentence + 1;
 
             pos.sentence = Math.min( senti, (qu.sentenceFragments.length - 1) );
             pos.fragment = 0;
+            console.log( 'new pos:', pos );
             qu.index     = qu.getIndex( pos );
 
             // console.log( 'sentence:');//, pos, qu.index );
@@ -468,7 +492,7 @@
             //     qu.index = qu.getIndex( qu.position );
             // }
 
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };  // End qu.nextSentence()
 
         qu.prevSentence = function () {
@@ -476,10 +500,10 @@
                 senti   = pos.sentence - 1;
 
             pos.sentence = Math.max( senti, 0 );
-            pos.fragment = 0;
+            pos.fragment = 0;  // -1 will only work for the 'next' operation...
             qu.index     = qu.getIndex( pos );
 
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };  // End qu.prevSentence()
 
         qu.currentSentence = function () {
@@ -489,18 +513,52 @@
             senti = Math.min( senti, (qu.sentenceFragments.length - 1) );
             senti = Math.max( senti, 0 );
             pos.sentence = senti;
-            pos.fragment = 0;
+            pos.fragment = 0;  // -1 will only work for the 'next' operation...
             qu.index     = qu.getIndex( pos );
 
-            return qu.getFrag( qu.position );
+            return qu.getFragment( qu.position );
         };  // End qu.currentSentence()
 
         qu.restart = function () {
             // Will be normalized by the next operation called (next, prev, current)
-            qu.index    = -1;
+            qu.index    = 0;
             qu.position = { sentence: 0, fragment: 0 };
             return qu;
         };
+
+
+        qu.goToWord = function ( index ) {
+
+            qu.index    = qu.neutralizeIndex( index );
+            qu.position = qu.positions[ index ];
+
+            // if ( qu.index > index ) {
+            //     while ( qu.index > index ) {
+            //         qu.prevWord();
+            //     }
+            // } else if ( qu.index < index ) {
+            //     while ( qu.index < index ) {
+            //         qu.nextWord();
+            //     }
+            // }
+
+            return qu.getFragment( qu.position );
+        };  // End qu.goToWord()
+
+
+        qu.goToSentence = function ( index ) {
+            index = qu.neutralizeIndex( index );
+
+            var pos      = qu.positions[ index ];
+            pos.fragment = 0;
+
+            // Update both current position and current index
+            qu.position  = pos;
+            qu.index     = qu.getIndex( pos );
+
+            return qu.getFragment( pos );
+        };  // End qu.goToSentence()
+
 
         // TODO: Go back whole words and sentences at a time
         qu.goTo = function ( playbackObj ) {
@@ -1449,15 +1507,17 @@ body {\
 
 		// ----- TIMER EVENTS ----- \\
 		var whiteSpaceRegexp = /[\n\r\s]/;
+		var paragraphSymbol  = '';
 		rPUI._showNewFragment = function ( evnt, timer, fragment ) {
 			// TOOD: Deal with line breaks in Queue instead
 			var chars = fragment.chars;
 			// Adds pauses for line breaks
 			if ( !whiteSpaceRegexp.test(chars) ) {
 				$(textButton).html( chars );
-				rPUI.stopWaiting();
+			} else {
+				$(textButton).html( paragraphSymbol );
 			}
-			// return chars;
+			rPUI.stopWaiting();
 			return rPUI;
 		};
 
@@ -1504,9 +1564,9 @@ body {\
 		rPUI.keyInput = function ( evnt ) {
 			// (currently sentence nav tests)
 			if ( evnt.keyCode === 39 ) {
-				timer.pause();
-				queue.nextSentence();
-				setTimeout( timer.play, 200 );
+				// timer.pause();
+				timer.nextSentence();
+				// setTimeout( timer.play, 200 );
 			}
 		};
 
@@ -1817,6 +1877,20 @@ body {\
 		rTim.togglePlayPause = function () {
 			if (rTim._isPlaying) { rTim.pause(); }
 			else { rTim.play(); }
+			return rTim;
+		};
+
+
+		rTim.nextSentence = function() {
+			rTim._wasPlaying = rTim._isPlaying;
+			rTim._pause( null, null, null );
+
+			rTim._queue.nextSentence();
+
+			rTim._progressOperation = 'current';
+			rTim.once();
+
+			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
 			return rTim;
 		};
 
