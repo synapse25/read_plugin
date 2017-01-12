@@ -414,38 +414,12 @@
 
         qu.next = qu.nextWord = function () {
 
-            // if ( qu.getProgress() >= 1 ) {
-            //     return qu.getFragment( qu.index );
-            // }
-
-            // var pos       = qu.position,
-            //     potential = { sentence: pos.sentence, fragment: pos.fragment },
-            //     sent      = qu.getSentence( potential );
-
-            // if ( pos.fragment >= sent.length ) {
-            //     potential.sentence += 1;
-            //     potential.fragment = 0;
-            //     sent = qu.getSentence( potential );
-            // }
-
-            // if ( sent ) {
-            //     qu.index += 1;
-            // }
-
-
-            // var incremented = { sentence: qu.position.sentence, word: qu.position.word + 1 }
-            // var potential = qu.getWord( incremented );
-            // if ( !potential ) {
-            //     incremented.sentence += 1;
-            //     incremented.word = 0;
-            //     potential;
-            // }
-            qu.index    = Math.min( qu.index + 1, qu.positions.length );  // no length - 1 because of -1 next line
-            var pos     = qu.positions[ qu.index - 1 ];  // -1 so we can get the first word
-            // qu.index    = Math.min( qu.index + 1, qu.positions.length - 1 );
-            // var pos     = qu.positions[ qu.index ];
+            qu.index    = Math.min( qu.index + 1, qu.positions.length );
+            var pos     = qu.positions[ qu.index ];
+            // Unfortunately, this means that .index doesn't exactly represent what was just shown...
+            // ??: What up with that?
             qu.position = { sentence: pos.sentence, fragment: pos.fragment };
-            // console.log( qu.position, qu.index );
+
             return qu.getFragment( qu.position );
         };
 
@@ -458,22 +432,18 @@
 
         qu.current = qu.currentWord = function() {
             // Make sure nothing's off about the index
-            var index   = Math.max( qu.index, 0 );
-            qu.index    = Math.min( index, qu.positions.length - 1 );
-            var pos     = qu.positions[ index ];
+            qu.index    = qu.neutralizeIndex( qu.index )
+            var pos     = qu.positions[ qu.index ];
             qu.position = { sentence: pos.sentence, fragment: pos.fragment };
             return qu.getFragment( qu.position );
         };
 
         qu.nextSentence = function () {
-            console.log('~~~NEXT SENTENCE~~~')
-            console.log('old pos:', qu.position )
             var pos     = qu.position,
                 senti   = pos.sentence + 1;
 
             pos.sentence = Math.min( senti, (qu.sentenceFragments.length - 1) );
             pos.fragment = 0;
-            console.log( 'new pos:', pos );
             qu.index     = qu.getIndex( pos );
 
             // console.log( 'sentence:');//, pos, qu.index );
@@ -528,20 +498,8 @@
 
 
         qu.goToWord = function ( index ) {
-
             qu.index    = qu.neutralizeIndex( index );
             qu.position = qu.positions[ index ];
-
-            // if ( qu.index > index ) {
-            //     while ( qu.index > index ) {
-            //         qu.prevWord();
-            //     }
-            // } else if ( qu.index < index ) {
-            //     while ( qu.index < index ) {
-            //         qu.nextWord();
-            //     }
-            // }
-
             return qu.getFragment( qu.position );
         };  // End qu.goToWord()
 
@@ -579,7 +537,7 @@
 
 
         qu.getProgress = function () {
-            qu._progress = qu.index / (qu.positions.length - 1);
+            qu._progress = qu.index / qu.positions.length;
             return qu._progress;
         };
 
@@ -1563,11 +1521,13 @@ body {\
 
 		rPUI.keyInput = function ( evnt ) {
 			// (currently sentence nav tests)
+			console.log( evnt.keyCode );
 			if ( evnt.keyCode === 39 ) {
 				// timer.pause();
 				timer.nextSentence();
 				// setTimeout( timer.play, 200 );
 			}
+			return rPUI;
 		};
 
 
@@ -1726,16 +1686,14 @@ body {\
 
 		rTim._init = function () {
 
-			rTim._currentWordFragment 	= null;
-
 			rTim.done 		 = false;
 			rTim.progress 	 = 0;
 
 			rTim._timeout 	 = null;
 			rTim._isPlaying  = false;
 			rTim._wasPlaying = false;
-			rTim._goToEngaged 	 = false;
-			rTim._progressOperation  = 'next';
+			rTim._progressOperation = 'next';
+			rTim._goToEngaged 	 	= false;
 
 			return rTim;
 		};  // End rTim._init()
@@ -1776,7 +1734,7 @@ body {\
 			return rTim;
 		};  // End rTim.start()
 
-		rTim.restart = function ( noEvent ) {
+		rTim.restart = function () {
 			rTim._restart( 'restartBegin', 'restartFinish', null );
 			return rTim;
 		};
@@ -1822,7 +1780,7 @@ body {\
 			
 			if ( !rTim._isPlaying ) {
 				rTim._isPlaying = true;
-				rTim._loop();
+				rTim._loop( 'current', rTim._loop );
 			}
 
 			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
@@ -1886,9 +1844,7 @@ body {\
 			rTim._pause( null, null, null );
 
 			rTim._queue.nextSentence();
-
-			rTim._progressOperation = 'current';
-			rTim.once();
+			rTim.once( 'current' );
 
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
 			return rTim;
@@ -1909,8 +1865,7 @@ body {\
 				}
 
 				rTim._queue.goTo( playbackObj );
-				rTim._progressOperation = 'current';
-				rTim.once();
+				rTim.once( 'current' );
 			}
 			return rTim;
 		};  // End rTim.goTo()
@@ -1925,10 +1880,12 @@ body {\
 		// ================================
 		// LOOPS
 		// ================================
-		rTim._loop = function ( justOnce ) {
+
+		rTim._loop = function ( progressOp, callback ) {
+		// If no callback, loop continues
 
 			var progress = rTim.progress = rTim.getProgress();
-			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index] );
+			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index, rTim._queue.positions.length - 1] );
 
 			// Stop if we've reached the end
 			if ( progress === 1 ) {
@@ -1941,21 +1898,30 @@ body {\
 			$(rTim).trigger( 'loopBegin', [rTim] );
 
 			// "next", "prev", or "current" word fragment
-			rTim._currentWordFragment = rTim._queue[ rTim._progressOperation ]();
-			var delay = delayer.calcDelay( rTim._currentWordFragment, justOnce );
-			if ( !justOnce ) { rTim._timeout = setTimeout( rTim._loop, delay ); }
+			// If calling the loop from the loop, just keep going in the same direction as before
+			// console.log( '1:', progressOp, rTim._progressOperation )
+			progressOp 	= progressOp || rTim._progressOperation;
+			// console.log( '2:', progressOp )
+			var frag  	= rTim._queue[ progressOp ](),
+				delay 	= delayer.calcDelay( frag, Boolean(callback) );  // TODO: for ff modify delay
+
+			// This allows, for example, 'current' and then looping on 'next'
+			if ( callback ) { rTim._timeout = setTimeout( callback, delay ); }
+			else { rTim._timeout = setTimeout( rTim._loop, delay ); }
 
 			// Do it after setTimeout so that you can easily pause on "newWordFragment"
 			// Feels weird, though
-			$(rTim).trigger( 'newWordFragment', [rTim, rTim._currentWordFragment] );
+			$(rTim).trigger( 'newWordFragment', [rTim, frag] );
 			$(rTim).trigger( 'loopFinish', [rTim] );
 
 			return rTim;  // Return timeout obj instead?
 		};  // End rTim._loop()
 
 
-		rTim.once = function () {
-			rTim._loop( true );
+		rTim.once = function ( progressOp ) {
+		// Loop once in the given direction
+			// function terminates loop
+			rTim._loop( progressOp, function () {});
 			return rTim;
 		};
 
