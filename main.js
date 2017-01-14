@@ -9,6 +9,7 @@
 * 	just text
 * - Add function "cleanHTML" to get rid of unwanted elements
 * - Remove html parsing from sbd node module
+* - Break this up into more descrete modules
 * 
 * WARNING:
 * Storage is all user settings. Too cumbersome otherwise for now.
@@ -18,9 +19,12 @@
 
 	// ============== SETUP ============== \\
 	var unfluff 	= require('@knod/unfluff'),
-		detect 		= require('detect-lang');
+		detect 		= require('detect-lang'),
+		$ 			= require('jquery');
 
-	var Queue 		= require('./lib/Queue.js'),
+	// var Queue 		= require('./lib/Queue.js'),
+	var Words 		= require('./lib/parse/Words.js'),
+		WordNav 	= require('./lib/parse/WordNav.js'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
 		Delayer 	= require('./lib/playback/Delayer.js')
 		Timer 		= require('./lib/playback/ReaderlyTimer.js'),
@@ -29,14 +33,15 @@
 		Settings 	= require('./lib/settings/ReaderlySettings.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
-	var queue, storage, delayer, timer, coreDisplay, playback, settings, speed;
+	var words, wordNav, storage, delayer, timer, coreDisplay, playback, settings, speed;
+	// var queue, storage, delayer, timer, coreDisplay, playback, settings, speed;
 
 
 	var afterLoadSettings = function ( oldSettings ) {
 		delayer 	= new Delayer( oldSettings, storage );
 		timer 		= new Timer( delayer, oldSettings, storage );
 		coreDisplay = new Display( timer );
-		playback 	= new Playback( timer, queue, coreDisplay );
+		playback 	= new Playback( timer, wordNav, coreDisplay );
 		settings 	= new Settings( timer, coreDisplay );
 		speed 		= new Speed( delayer, settings );
 	};  // End afterLoadSettings()
@@ -48,7 +53,9 @@
 
 
 	var init = function () {
-		queue 	= new Queue();
+		// queue 	= new Queue();
+		words 	= new Words();
+		wordNav = new WordNav();
 		storage = new Storage();
 		storage.loadAll( afterLoadSettings );
 
@@ -63,9 +70,10 @@
 
 	// ============== RUNTIME ============== \\
 	var read = function ( text ) {
-		// TODO: If there's already a queue, start where we left off
-		queue.process( text );
-		timer.start( queue );
+		// TODO: If there's already a `words`, start where we left off
+		words.process( text );
+		wordNav.process( words );
+		timer.start( wordNav );
 		return true;
 	};
 
