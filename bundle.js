@@ -814,6 +814,7 @@ body {\
         module.exports = wNavFactory();
     } else {  // Global if nothing else
         // Browser globals
+        // !!! Broken !!!
         root.WordNav = wNavFactory( Fragment, root );  // root.sentences is undefined :P Not sure what to provide there
     }
 }(this, function () {
@@ -833,8 +834,8 @@ body {\
         wNav.words 		= null;
 
         wNav.index 		= 0;
-        wNav.index2 	= [ 0, 0 ];
-        wNav.position 	= { sentence: 0, fragment: 0 };
+        // wNav.position 	= { sentence: 0, fragment: 0 };
+        wNav.position   = [0, 0];
 
         // ==== Internal ==== \\
         wNav._progress 	= 0;
@@ -861,17 +862,24 @@ body {\
                 pos = posOrIndex;
             }
 
-            var frag = sentences[ pos.sentence ].fragments[ pos.fragment ];
+            var frag = sentences[ pos[0] ][ pos[1] ];
             return frag;
         };
+
+        // !!! New
+        // wNav.getFragment = function ( changesOrIndex ) {
+        //     step( changesOrIndex )
+        //     wNav.position = positions[index]
+        //     return wNav.sentences[ pos[0] ][ pos[1] ]
+        // }
 
         wNav.getIndex = function ( posToTest ) {
             // console.log('position to test for:', posToTest)
             // console.log('position:', posToTest, 'positions:', positions)
             var index = positions.findIndex( function matchPositionToIndex( pos ) {
                 // console.log( pos );
-                var sent = pos.sentence === posToTest.sentence,
-                    frag = pos.fragment === posToTest.fragment;
+                var sent = pos[0] === posToTest[0],
+                    frag = pos[1] === posToTest[1];
                 return sent && frag;
             });
             // console.log( 'index found:', index)
@@ -900,37 +908,36 @@ body {\
 
         wNav.next = wNav.nextWord = function () {
 
-            wNav.index 	= Math.min( wNav.index + 1, positions.length - 1 );
-            var pos     = positions[ wNav.index ];
-            // Unfortunately, this means that .index doesn't exactly represent what was just shown...
-            // ??: What up with that?
-            wNav.position = { sentence: pos.sentence, fragment: pos.fragment };
+            wNav.index 	    = Math.min( wNav.index + 1, positions.length - 1 );
+            var pos         = positions[ wNav.index ];
+            wNav.position   = [pos[0], pos[1]];
 
             return wNav.getFragment( wNav.position );
         };
 
         wNav.prev = wNav.prevWord = function () {
-            wNav.index  = Math.max( wNav.index - 1, 0 );
-            var pos     = positions[ wNav.index ];
-            wNav.position = { sentence: pos.sentence, fragment: pos.fragment };
+            wNav.index      = Math.max( wNav.index - 1, 0 );
+            var pos         = positions[ wNav.index ];
+            wNav.position   = [ pos[0], pos[1] ];
             return wNav.getFragment( wNav.position );
         };
 
         wNav.current = wNav.currentWord = function() {
             // Make sure nothing's off about the index
-            wNav.index    = wNav.normalizeIndex( wNav.index )
-            var pos     = positions[ wNav.index ];
-            wNav.position = { sentence: pos.sentence, fragment: pos.fragment };
+            wNav.index      = wNav.normalizeIndex( wNav.index )
+            var pos         = positions[ wNav.index ];
+            wNav.position   = [ pos[0], pos[1] ];
             return wNav.getFragment( wNav.position );
         };
 
         wNav.nextSentence = function () {
-            var pos     = wNav.position,
-                senti   = pos.sentence + 1;
+            var pos   = wNav.position,
+                senti = pos[0] + 1;
+                // senti   = pos.sentence + 1;
 
-            pos.sentence = Math.min( senti, (sentences.length - 1) );
-            pos.fragment = 0;
-            wNav.index     = wNav.getIndex( pos );
+            pos[0]      = Math.min( senti, (sentences.length - 1) );
+            pos[1]      = 0;
+            wNav.index  = wNav.getIndex( pos );
 
             // console.log( 'sentence:');//, pos, wNav.index );
 
@@ -953,29 +960,29 @@ body {\
 
         wNav.prevSentence = function () {
             var pos     = wNav.position,
-                senti   = pos.sentence;
+                senti   = pos[0];
 
             // If we're in the middle of a sentence, go back to the
             // beginning the sentence. Otherwise, go to the previous
             // sentence. ??: Should the behavior really be here?
-            if ( pos.fragment === 0 ) { senti -= 1; }
+            if ( pos[1] === 0 ) { senti -= 1; }
                 
-            pos.sentence = Math.max( senti, 0 );
-            pos.fragment = 0;
-            wNav.index     = wNav.getIndex( pos );
+            pos[0]      = Math.max( senti, 0 );
+            pos[1]      = 0;
+            wNav.index  = wNav.getIndex( pos );
 
             return wNav.getFragment( wNav.position );
         };  // End wNav.prevSentence()
 
         wNav.currentSentence = function () {
             var pos     = wNav.position,
-                senti   = pos.sentence;
+                senti   = pos[0];
 
-            senti = Math.min( senti, (sentences.length - 1) );
-            senti = Math.max( senti, 0 );
-            pos.sentence = senti;
-            pos.fragment = 0;
-            wNav.index     = wNav.getIndex( pos );
+            senti   = Math.min( senti, (sentences.length - 1) );
+            senti   = Math.max( senti, 0 );
+            pos[0]  = senti;
+            pos[1]  = 0;
+            wNav.index = wNav.getIndex( pos );
 
             return wNav.getFragment( wNav.position );
         };  // End wNav.currentSentence()
@@ -983,7 +990,7 @@ body {\
         wNav.restart = function () {
             // Will be normalized by the next operation called (next, prev, current)
             wNav.index    = 0;
-            wNav.position = { sentence: 0, fragment: 0 };
+            wNav.position = [0, 0];
             return wNav;
         };
 
@@ -998,8 +1005,8 @@ body {\
         wNav.goToSentence = function ( index ) {
             index = wNav.normalizeIndex( index );
 
-            var pos      = positions[ index ];
-            pos.fragment = 0;
+            var pos = positions[ index ];
+            pos[1]  = 0;
 
             // Update both current position and current index
             wNav.position  = pos;
@@ -1120,9 +1127,9 @@ body {\
             wrds.positions 	= [];
 
             for ( let senti = 0; senti < sentences.length; senti++ ) {
-                let sentence            = sentences[senti],
-                    fragmentedWithPos   = wrds._processSentence( sentence, senti );
-                sFrags.push( fragmentedWithPos );
+                let sentence     = sentences[senti],
+                    fragmented   = wrds._processSentence( sentence, senti );
+                sFrags.push( fragmented );
             }
 
             return wrds;
@@ -1154,7 +1161,8 @@ body {\
                             let frag = new Fragment(subsubWords[k]);
 
                             sentence.push( frag );
-                            positions.push( { sentence: sentenceIndex, fragment: fragIndex } );
+                            positions.push( [ sentenceIndex, fragIndex ] );
+                            // positions.push( { sentence: sentenceIndex, fragment: fragIndex } );
                             fragIndex++;
                             
                             k++;
@@ -1163,8 +1171,10 @@ body {\
                     } else {
                         let frag = new Fragment(subWords[j]);
                         sentence.push( frag );
-                        positions.push( { sentence: sentenceIndex, fragment: fragIndex } );
-                        fragIndex++;
+                        positions.push( [ sentenceIndex, fragIndex ] );
+                        // positions.push( { sentence: sentenceIndex, fragment: fragIndex } );
+
+                       fragIndex++;
                     }  // end if long word
 
                     j++;
@@ -1174,7 +1184,7 @@ body {\
             }  // end for every raw word
 
             // TODO: Change this format
-            return {posIndex: positions.length, fragments: sentence};
+            return sentence;
         };  // End wrds._processSentence()
 
         wrds._puncBreak = function (word) {  // Recursive
