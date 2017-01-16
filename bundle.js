@@ -824,9 +824,11 @@ body {\
 
     // TODO: Do this without needing a new object each time
     var WordNav = function () {
-    /* {}
+    /* ( None ) -> WordNav
     * 
-    * 
+    * Provides commands for getting the words/fragments passed into
+    * its `.process()`. 
+    * Always use .getFragment
     */
         var wNav = {};
 
@@ -834,17 +836,17 @@ body {\
         wNav.words 		= null;
 
         wNav.index 		= 0;
-        // wNav.position 	= { sentence: 0, fragment: 0 };
         wNav.position   = [0, 0];
 
         // ==== Internal ==== \\
         wNav._progress 	= 0;
         var sentences 	= null,
-        	positions 	= null;
+        	positions 	= null;;
 
 
        	wNav.process = function ( words ) {
        		if (!words) { console.error('WordNav needs dataz to .process(). You gave it dis:', words); }
+
 	        wNav.words 	= words;
 	        sentences 	= words.sentenceFragments;
 	    	positions 	= words.positions;
@@ -853,139 +855,6 @@ body {\
        	};
 
         // ========= RUNTIME: TRAVELING THE WORDS/SENTENCES (for external use) ========= \\
-        wNav.getFragment = function ( posOrIndex ) {
-        // Either a position or an index can be passed in
-            var pos = null;
-            if ( typeof pos === 'number' ) {
-                pos = positions[ posOrIndex ]
-            } else {
-                pos = posOrIndex;
-            }
-
-            var frag = sentences[ pos[0] ][ pos[1] ];
-            return frag;
-        };
-
-        // !!! New
-        // wNav.getFragment = function ( changesOrIndex ) {
-        //     step( changesOrIndex )
-        //     wNav.position = positions[index]
-        //     return wNav.sentences[ pos[0] ][ pos[1] ]
-        // }
-
-        wNav.getIndex = function ( posToTest ) {
-            // console.log('position to test for:', posToTest)
-            // console.log('position:', posToTest, 'positions:', positions)
-            var index = positions.findIndex( function matchPositionToIndex( pos ) {
-                // console.log( pos );
-                var sent = pos[0] === posToTest[0],
-                    frag = pos[1] === posToTest[1];
-                return sent && frag;
-            });
-            // console.log( 'index found:', index)
-            return index;
-        };
-
-        wNav.getPosition = function ( index ) {
-            return positions[ index ];
-        };
-
-
-        wNav.normalizeIndex = function ( index ) {
-            index = Math.min( index, positions.length - 1 );  // max
-            return Math.max( index, 0 );  // min
-        };
-
-        // wNav.getSentence = function ( pos ) {
-        //     var sent = sentences[ pos.sentence ];
-        //     return sent;
-        // };
-
-        // wNav.getWord = function ( pos ) {
-        //     var frag = sentences[ pos.sentence ].fragments[ pos.fragment ];
-        //     return frag;
-        // };
-
-        wNav.next = wNav.nextWord = function () {
-
-            wNav.index 	    = Math.min( wNav.index + 1, positions.length - 1 );
-            var pos         = positions[ wNav.index ];
-            wNav.position   = [pos[0], pos[1]];
-
-            return wNav.getFragment( wNav.position );
-        };
-
-        wNav.prev = wNav.prevWord = function () {
-            wNav.index      = Math.max( wNav.index - 1, 0 );
-            var pos         = positions[ wNav.index ];
-            wNav.position   = [ pos[0], pos[1] ];
-            return wNav.getFragment( wNav.position );
-        };
-
-        wNav.current = wNav.currentWord = function() {
-            // Make sure nothing's off about the index
-            wNav.index      = wNav.normalizeIndex( wNav.index )
-            var pos         = positions[ wNav.index ];
-            wNav.position   = [ pos[0], pos[1] ];
-            return wNav.getFragment( wNav.position );
-        };
-
-        wNav.nextSentence = function () {
-            var pos   = wNav.position,
-                senti = pos[0] + 1;
-                // senti   = pos.sentence + 1;
-
-            pos[0]      = Math.min( senti, (sentences.length - 1) );
-            pos[1]      = 0;
-            wNav.index  = wNav.getIndex( pos );
-
-            // console.log( 'sentence:');//, pos, wNav.index );
-
-            // // Possibly faster method to explore if optimization becomes an issue:
-            // // If there's no next sentence
-            // if ( senti >= sentences.length ) {
-            //     // Go to the start of the last sentence
-            //     var diff = wNav.position.fragment;
-            //     wNav.position.fragment = 0;
-            //     wNav.index -= diff;
-            //     // ?? Stay at the current word instead?
-            // } else {
-            //     wNav.position.sentence += 1;
-            //     wNav.position.fragment = 0;
-            //     wNav.index = wNav.getIndex( wNav.position );
-            // }
-
-            return wNav.getFragment( wNav.position );
-        };  // End wNav.nextSentence()
-
-        wNav.prevSentence = function () {
-            var pos     = wNav.position,
-                senti   = pos[0];
-
-            // If we're in the middle of a sentence, go back to the
-            // beginning the sentence. Otherwise, go to the previous
-            // sentence. ??: Should the behavior really be here?
-            if ( pos[1] === 0 ) { senti -= 1; }
-                
-            pos[0]      = Math.max( senti, 0 );
-            pos[1]      = 0;
-            wNav.index  = wNav.getIndex( pos );
-
-            return wNav.getFragment( wNav.position );
-        };  // End wNav.prevSentence()
-
-        wNav.currentSentence = function () {
-            var pos     = wNav.position,
-                senti   = pos[0];
-
-            senti   = Math.min( senti, (sentences.length - 1) );
-            senti   = Math.max( senti, 0 );
-            pos[0]  = senti;
-            pos[1]  = 0;
-            wNav.index = wNav.getIndex( pos );
-
-            return wNav.getFragment( wNav.position );
-        };  // End wNav.currentSentence()
 
         wNav.restart = function () {
             // Will be normalized by the next operation called (next, prev, current)
@@ -994,45 +863,139 @@ body {\
             return wNav;
         };
 
-
-        wNav.goToWord = function ( index ) {
-            wNav.index    = wNav.normalizeIndex( index );
-            wNav.position = positions[ index ];
-            return wNav.getFragment( wNav.position );
-        };  // End wNav.goToWord()
-
-
-        wNav.goToSentence = function ( index ) {
-            index = wNav.normalizeIndex( index );
-
-            var pos = positions[ index ];
-            pos[1]  = 0;
-
-            // Update both current position and current index
-            wNav.position  = pos;
-            wNav.index     = wNav.getIndex( pos );
-
-            return wNav.getFragment( pos );
-        };  // End wNav.goToSentence()
+        wNav.getFragment = function ( changesOrIndex ) {
+        // ( [#, #] or # ) -> Fragment
+            wNav.index      = wNav._step( changesOrIndex );
+            wNav.position   = positions[ wNav.index ];
+            return sentences[ wNav.position[0] ][ wNav.position[1] ];
+        }
 
 
-        // TODO: Go back whole words and sentences at a time
-        wNav.goTo = function ( playbackObj ) {
-        // .type = 'index', 'word', or 'sentence'
-        // .amount = int
-        // Not sure what argument to pass in.
-        // 'previous sentence'? 'next sentence'? 'section of document'? An index number?
-            var type    = playbackObj.type,
-                amount  = playbackObj.amount;
-            if ( type === 'index' || type === 'word' ) {
-                wNav.index = amount;
-            } else if ( type === 'sentence' ) {
+        wNav._step = function ( changesOrIndex ) {
+        // ( [#, #] or # ) -> Fragment
+            var index = wNav.index;
 
+            if ( typeof changesOrIndex === 'number' ) {
+                index = wNav.normalizeIndex( changesOrIndex );
+            } else {
+                // If there's a sentence level change, we're traveling
+                // sentences, not words (this assumes we never do both)
+                if ( changesOrIndex[0] ) {
+                    index = wNav._stepSentence( changesOrIndex[0] );
+                } else {
+                    index += changesOrIndex[1];
+                    index = wNav.normalizeIndex( index );
+                }
+            }  // end if index or change array
+            return index;
+        };  // end wNav._step();
+
+
+        wNav._stepSentence = function ( sentenceChange ) {
+        // ( [int, int] ) -> int
+        // TODO: Account for right arrow on last sentence
+            if ( sentenceChange === 0 ) {return};
+
+            var pos     = [ wNav.position[0], wNav.position[1] ],
+                senti   = pos[0],
+                wordi   = pos[1];
+
+            // If in the last sentence, go to the last word
+            if ( sentenceChange > 0 && senti >= (sentences.length - 1) ) {
+                wordi = sentences[ senti ].length - 1;
+
+            } else {
+                // If we're in the middle of a sentence and we're
+                // only going back one step, go back to the beginning of the sentence
+                if ( sentenceChange === -1 && wordi > 0 ) {}  // No change to sentence
+                // otherwise change sentence
+                else { senti += sentenceChange; }
+                // Either way, word is first word of sentence
+                wordi = 0;
+            }  // end if at last sentence
+
+            pos[1] = wordi;
+            pos[0] = wNav.normalizeSentencePos( senti );
+
+            var newIndex = wNav._sentenceChangeToIndex( sentenceChange, pos );
+            if ( newIndex === null ) { newIndex = wNav.index; }
+
+            return newIndex;
+        };  // End wNav._stepSentence
+
+        wNav._sentenceChangeToIndex = function ( sentenceChange, newPos ) {
+        /* ( int, [int, int] ) -> int or null
+        * 
+        * Given the direction of change and the position desired, find the
+        * index of the new position.
+        * Only used for sentence changes. If we need something else,
+        * we'll see about that then. Just trying to speed up the search
+        */
+            if ( sentenceChange === 0 ) {return null;}  // signOf shouldn't return NaN now
+
+            var incrementor = signOf( sentenceChange ),  // 1 or -1
+                tempi       = wNav.index,
+                found       = false;
+
+            // Until we find the position or there are no more positions left
+            while ( !found && positions[ tempi ] ) {
+                // Test out positions
+                var pos = positions[ tempi ];
+                if ( pos[0] === newPos[0] && pos[1] === newPos[1] ) {
+                    found = true;
+                }
+                // If not found, keep going until there are no more positions left in the list
+                if (!found) { tempi += incrementor; }
             }
-            // TODO: (perhaps) wNav[ type ] = amount;
-            return wNav;
+
+            // If we went through all the list we could and didn't find anything, say so
+            // Not quite sure why that would happen, though
+            if ( !positions[tempi] ) { tempi = null; }
+
+            return tempi;
+        };  // End wNav._sentenceChangeToIndex()
+
+        wNav._positionToIndex = function ( pos ) {
+        /* ( [int, int] ) -> int
+        * 
+        * Given a [sentence, word] position, find the index of that
+        * configuration in the positions list. If none found, return
+        * -1. (There are ways to speed this up if needed, like checking
+        * just sentence index first until sentence found, etc).
+        * 
+        * This is different from ._sentenceChangeToIndex() because this
+        * one searches the whole array, it doesn't start from the current
+        * position and work in a direction (back of forward) from there.
+        */
+            var index = positions.findIndex( function matchPosToIndex( potential ) {
+                var sent = (pos[0] === potential[0]),
+                    frag = (pos[1] === potential[1]);
+                return sent && frag
+            })
+            return index;
+        }
+
+
+
+        // ========== utilities ========== \\
+
+        var signOf = function ( num ) {
+            return typeof num === 'number' ? num ? num < 0 ? -1 : 1 : num === num ? num : NaN : NaN;
+        }
+
+        wNav.normalizeIndex = function ( index ) {
+            index = Math.min( index, positions.length - 1 );  // max
+            return Math.max( index, 0 );  // min
         };
 
+        wNav.normalizeSentencePos = function ( senti ) {
+            senti = Math.min( senti, (sentences.length - 1) );
+            return Math.max( senti, 0 );
+        };
+
+
+
+        // ========== gets ========== \\
 
         wNav.getProgress = function () {
             wNav._progress = wNav.index / positions.length;
@@ -1042,6 +1005,10 @@ body {\
         wNav.getLength = function () {
             return positions.length;
         };
+
+        wNav.getIndex = function () {
+            return wNav.index;
+        }
 
         return wNav;
     };  // End WordNav() -> {}
@@ -1583,17 +1550,17 @@ body {\
 
 
 		rPUI._updateScrubbedWords = function ( values, handle ) {
-			timer.goTo({
+			timer.jumpTo({
 				type: 'index',
 				amount: parseInt(values[handle])
 			});
 			return rPUI;
-		};
+		};  // End rPUI._updateScrubbedWords()
 
 
 		rPUI._stopScrubbing = function ( values, handle ) {
 			rPUI.isScrubbing = false;
-			timer.disengageGoTo();
+			timer.disengageJumpTo();
 			return rPUI;
 		};  // End rPUI._stopScrubbing()
 
@@ -1611,7 +1578,7 @@ body {\
 			}
 
 			return rPUI;
-		};
+		};  // End rPUI.keyUp()
 
 
 		rPUI.keyDown = function ( evnt ) {
@@ -1633,7 +1600,7 @@ body {\
 			}
 
 			return rPUI;
-		};
+		};  // End rPUI.keyDown()
 
 
 		// =========== INITIALIZE =========== \\
@@ -1685,7 +1652,7 @@ body {\
 			$(coreDisplay.nodes.doc).on( 'keyup', rPUI.keyUp );
 
 			return rPUI;
-		};
+		};  // End rPUI._addEvents()
 
 
 		rPUI._init = function ( coreDisplay ) {
@@ -1731,7 +1698,7 @@ body {\
 			rPUI._addEvents();
 
 			return rPUI;
-		};
+		};  // End rPUI._init()
 
 
 		// =========== ADD NODE, ETC. =========== \\
@@ -1798,11 +1765,12 @@ body {\
 
 			rTim.done 		 = false;
 
-			rTim._timeout 	 = null;
+			rTim._timeoutID  = null;
 			rTim._isPlaying  = false;
 			rTim._wasPlaying = false;
-			rTim._progressOperation = 'next';
-			rTim._goToEngaged 	 	= false;
+			rTim._jumping 	 = false;
+
+			rTim._incrementor = [0, 1];
 
 			return rTim;
 		};  // End rTim._init()
@@ -1854,7 +1822,6 @@ body {\
 		rTim._restart = function ( startEventName, endEventName, startDelayModFunc ) {
 
 			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
-			// rTim.pause();  // Do we need this?
 
 			rTim.done = false;
 
@@ -1865,6 +1832,7 @@ body {\
 
 			// Just put the index at the right place
 			rTim._queue.restart();
+			rTim._pause(null, null, null);
 			rTim.play();
 
 			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
@@ -1886,13 +1854,13 @@ body {\
 		* ??: Just one eventName which gets + 'Begin' and + 'Finish' where appropriate?
 		*/
 			// "play" will always be forward. "rewind" can be play, but with "prev".
-			rTim._progressOperation = 'next';
+			rTim._incrementor = [0, 1];
 
 			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
 			
 			if ( !rTim._isPlaying ) {
 				rTim._isPlaying = true;
-				rTim._loop( 'current', rTim._loop );
+				rTim._loop( [0, 0], rTim._loop );
 			}
 
 			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
@@ -1902,7 +1870,7 @@ body {\
 
 
 		rTim.play = function () {
-			if ( rTim.done ) { rTim.restart(); }
+			if ( rTim.done ) { rTim.restart(); }  // Comes back here after restarted
 			else { rTim._play( 'playBegin', 'playFinish' ); }
 			return rTim;
 		};  // End rTim.play()
@@ -1917,8 +1885,9 @@ body {\
 		*/ 
 			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
 
-			clearTimeout(rTim._timeout);
+			clearTimeout(rTim._timeoutID);
 			rTim._isPlaying = false;
+
 
 			// Start slow when next go through loop (restore countdown)
 			var delayMod = startDelayModFunc || rTim._noDelayMod;
@@ -1926,6 +1895,8 @@ body {\
 			delayer.resetSlowStart( delay );
 
 			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
+
+			return rTim;
 		};  // End rTim._pause()
 
 
@@ -1952,85 +1923,73 @@ body {\
 		};
 
 
-		rTim._progression = function ( op ) {
-		// Perform a progression operation
-
+		// ========== FF and REWIND (arrow keys and other) ========== \\
+		rTim._increment = function ( op ) {
+		// Or decrement :/
 			rTim._wasPlaying = rTim._isPlaying;
 			rTim._pause( null, null, null );
 
-			rTim._queue[ op ]();
-			rTim.once( 'current' );
+			rTim.once( op );
 
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
-
 			return rTim;
 		};
 
-
-		rTim._next = function ( type ) {
-		// `type` must have a capital first letter
-			var op = 'next' + type;
-			rTim._progression( op );
-			return rTim;
-		};
 		rTim.nextWord = function () {
-			rTim._next( 'Word' );
+			rTim._increment( [0, 1] );
 			return rTim;
 		};
 		rTim.nextSentence = function() {
-			rTim._next( 'Sentence' );
+			rTim._increment( [1, 0] );
 			return rTim;
 		};
 
-
-		rTim._prev = function ( type ) {
-		// `type` must have a capital first letter
-			var op = 'prev' + type;
-			rTim._progression( op );
-			return rTim;
-		};
 		rTim.prevWord = function () {
-			rTim._prev( 'Word' );
+			rTim._increment( [0, -1] );
 			return rTim;
 		};
 		rTim.prevSentence = function() {
-			rTim._prev( 'Sentence' );
+			rTim._increment( [-1, 0] );
 			return rTim;
 		};
 
 
-		// TODO: If done and goTo < length, done = false
-		rTim.goTo = function ( playbackObj ) {
+		// =================== Scrubber bar =================== \\
+		rTim.jumpTo = function ( playbackObj ) {
 		// Argument to pass in? 'previous sentence'? 'next sentence'?
 		// 'section of document'? An index number?
 		// ??: How to give useful feedback from this?
+
 			if ( rTim._queue ) {
 
-				if ( !rTim._goToEngaged ) {
+				if ( !rTim._jumping ) {
 					rTim._wasPlaying = rTim._isPlaying;
 					rTim._pause( null, null, null );
-					rTim._goToEngaged = true;
+					rTim._jumping = true;
 				}
 
-				rTim._queue.goTo( playbackObj );
-				rTim.once( 'current' );
+				var newIndex = playbackObj.amount,
+					oldIndex = rTim._queue.getIndex();
+				rTim.once( [0, newIndex - oldIndex] );
 			}
 			return rTim;
-		};  // End rTim.goTo()
+		};  // End rTim.jumpTo()
 
-		rTim.disengageGoTo = function () {
+		rTim.disengageJumpTo = function () {
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
-			rTim._goToEngaged = false;
+			rTim._jumping = false;
 			return rTim;
 		};
+
 
 
 		// ================================
 		// LOOPS
 		// ================================
 
-		rTim._loop = function ( progressOp, callback ) {
-		// If no callback, loop continues
+		rTim._wordsDone = function () {
+		// Checks progress
+		// Returns `true` if we're at the end of the words
 
 			var progress = rTim.getProgress();
 			// TODO: Needs some work. Fragile.
@@ -2041,20 +2000,31 @@ body {\
 				$(rTim).trigger( 'done', [rTim] );
 				rTim.stop();
 				rTim.done = true;
-				return rTim;
+			} else {
+				rTim.done = false;
 			}
+
+			return rTim.done;
+		};  // End rTim._wordsDone()
+
+
+		rTim._loop = function ( progressOp, callback ) {
+		// `callback` can help you terminate without continuing to loop
+
+			// Finish if we're at the end of the text
+			if ( rTim._wordsDone() ) { return rTim; }
 
 			$(rTim).trigger( 'loopBegin', [rTim] );
 
-			// "next", "prev", or "current" word fragment
-			// If calling the loop from the loop, just keep going in the same direction as before
-			progressOp 	= progressOp || rTim._progressOperation;
-			var frag  	= rTim._queue[ progressOp ](),
-				delay 	= delayer.calcDelay( frag, Boolean(callback) );  // TODO: for ff modify delay
+			// If calling the loop from the loop, just keep going in the same global direction
+			// Allows for stuff like `._play()` to show current word, then keep going
+			progressOp 	= progressOp || rTim._incrementor;
+			var frag  	= rTim._queue.getFragment( progressOp ),
+				// TODO: Some way to prevent or alter delay that is more obvious
+				delay 	= delayer.calcDelay( frag, Boolean(callback) );  // TODO: for fastforward, modify speed
 
-			// This allows, for example, 'current' and then looping on 'next'
-			if ( callback ) { rTim._timeout = setTimeout( callback, delay ); }
-			else { rTim._timeout = setTimeout( rTim._loop, delay ); }
+			callback = callback || rTim._loop;
+			rTim._timeoutID = setTimeout( callback, delay );
 
 			// Do it after setTimeout so that you can easily pause on "newWordFragment"
 			// Feels weird, though
@@ -2068,7 +2038,7 @@ body {\
 		rTim.once = function ( progressOp ) {
 		// Loop once in the given direction
 			// function terminates loop
-			rTim._loop( progressOp, function () {});
+			rTim._loop( progressOp, function stopAfterOnce(){});
 			return rTim;
 		};
 
