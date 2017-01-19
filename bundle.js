@@ -1266,9 +1266,10 @@ body {\
 		// ============== RUNTIME ============== \\
 
 		rDel.calcDelay = function ( frag, justOnce ) {
+		// !!! TODO: `justOnce` is an issue because it's actually just whether
+		// or not a function has been passed into the loop, nothing else
 			var delay = rDel.delay;
 
-			// var frag  = rDel._currentWordFragment;  // Current word fragment
 			if ( frag.hasPeriod ) 	 delay *= _rSetts.sentenceDelay;
 			if ( frag.hasOtherPunc ) delay *= _rSetts.otherPuncDelay;
 			if ( frag.isShort() ) 	 delay *= _rSetts.shortWordDelay;
@@ -1282,6 +1283,7 @@ body {\
 			// repeatedly, like when the scrubber is moved.
 			if (!justOnce) {rDel._tempSlowStart = Math.max( 1, extraDelay / 1.5 );}
 			delay = delay * rDel._tempSlowStart;
+			// Once is true all the time
 
 			return delay;
 		};  // End rDel.calcDelay()
@@ -1293,12 +1295,8 @@ body {\
 		* For after restart or pause, assign a value to start the
 		* text off slowly to warm the reader up to full speed.
 		*/
-			if ( val ) {
-				rDel._tempSlowStart = val;
-			} else {
-				rDel._tempSlowStart = _rSetts.slowStartDelay;
-			}
-
+			if ( val ) { rDel._tempSlowStart = val; }
+			else { rDel._tempSlowStart = _rSetts.slowStartDelay; }
 			return rDel;
 		};
 
@@ -1772,9 +1770,8 @@ body {\
 			// Moving around
 			rTim._jumping 	 		= false;
 			rTim._incrementors 		= [0, 1];
-			rTim._sentenceWalking 	= false;
-			rTim._sentenceSkippers 	= [ '\n', '\r' ];
-
+			rTim._skipWhitespace 	= false;
+			rTim._whitespace 		= [ '\n', '\r' ];
 
 			return rTim;
 		};  // End rTim._init()
@@ -1864,7 +1861,7 @@ body {\
 			
 			if ( !rTim._isPlaying ) {
 				rTim._isPlaying = true;
-				rTim._loop( [0, 0], rTim._loop );
+				rTim._loop( [0, 0], false );
 			}
 
 			if ( endEventName ) $(rTim).trigger( endEventName, [rTim] );
@@ -1889,9 +1886,8 @@ body {\
 		*/ 
 			if ( startEventName ) $(rTim).trigger( startEventName, [rTim] );
 
-			clearTimeout(rTim._timeoutID);
+			clearTimeout(rTim._timeoutID);  // Needed? Maybe more immediate.
 			rTim._isPlaying = false;
-
 
 			// Start slow when next go through loop (restore countdown)
 			var delayMod = startDelayModFunc || rTim._noDelayMod;
@@ -1927,37 +1923,34 @@ body {\
 
 
 		// ========== FF and REWIND (arrow keys and other) ========== \\
-		rTim._increment = function ( changes ) {
+		rTim._oneStepUntimed = function ( changes ) {
 		// Or decrement :/
 			rTim._wasPlaying = rTim._isPlaying;
 			rTim._pause( null, null, null );
 
+			rTim._skipWhitespace = true;
 			rTim.once( changes );
-			rTim._sentenceWalking = false;
+			rTim._skipWhitespace = false;
 
 			if ( rTim._wasPlaying ) { rTim._play( null, null, null ); }
 			return rTim;
-		};
+		};  // End rTim._oneStepUntimed()
 
 		rTim.nextWord = function () {
-			rTim._increment( [0, 1] );
+			rTim._oneStepUntimed( [0, 1] );
 			return rTim;
 		};
 		rTim.nextSentence = function() {
-			console.log('next');
-			rTim._increment( [1, 0] );
-			rTim._sentenceWalking = true;
+			rTim._oneStepUntimed( [1, 0] );
 			return rTim;
 		};
 
 		rTim.prevWord = function () {
-			rTim._increment( [0, -1] );
+			rTim._oneStepUntimed( [0, -1] );
 			return rTim;
 		};
 		rTim.prevSentence = function() {
-			console.log('prev');
-			rTim._increment( [-1, 0] );
-			rTim._sentenceWalking = true;
+			rTim._oneStepUntimed( [-1, 0] );
 			return rTim;
 		};
 
@@ -1967,7 +1960,6 @@ body {\
 		// Argument to pass in? 'previous sentence'? 'next sentence'?
 		// 'section of document'? An index number?
 		// ??: How to give useful feedback from this?
-
 			if ( rTim._queue ) {
 
 				if ( !rTim._jumping ) {
@@ -1995,6 +1987,10 @@ body {\
 		// LOOPS
 		// ================================
 
+        rTim.signOf = function ( num ) {
+            return typeof num === 'number' ? num ? num < 0 ? -1 : 1 : num === num ? num : NaN : NaN;
+        }
+
 		rTim._wordsDone = function () {
 		// Checks progress
 		// Returns `true` if we're at the end of the words
@@ -2016,78 +2012,77 @@ body {\
 		};  // End rTim._wordsDone()
 
 
-		rTim._shouldSkip = function ( frag ) {
-			var skipIt = false;
+        rTim._skipDirection = function ( incrementors, frag ) {
+			var vector = 0;
 
-			if ( rTim._sentenceWalking && rTim._sentenceSkippers.indexOf( frag ) ) {
-				skipIt = true;
+			if ( rTim._skipWhitespace && rTim._whitespace.indexOf( frag.chars ) > -1 ) {
+
+				if ( incrementors[1] !== 0 ) {
+					vector = rTim.signOf(incrementors[1]);
+				} else if( incrementors[0] !== 0 ) {
+					vector = rTim.signOf(incrementors[0]);
+
+				// For when play passes [0, 0]. ??: Does anything else ever do this?
+				// We're going to have to skip in some direction or we'll never get anywhere
+				} else {
+					vector = 1;  // ??: Always true?
+				}
 			}
 
-			return skipIt;
-		};  // End rTim._shouldSkip()
+			return vector;
+        };  // End rTim._skipDirection()
 
 
-        rTim.signOf = function ( num ) {
-            return typeof num === 'number' ? num ? num < 0 ? -1 : 1 : num === num ? num : NaN : NaN;
-        }
+        rTim._loop = function( incrementors, justOnce ) {
+        // https://jsfiddle.net/d1mgadeo/2/
 
-
-		rTim._loop = function ( incrementors, callback ) {
-		// `callback` can help you terminate without continuing to loop
-
-			// Finish if we're at the end of the text
-			if ( rTim._done ) { return rTim; }
+    	    // Finish if we're at the end of the text
+    	    if ( rTim._done ) { return; }
+    	    // can't do if (!_isPlaying) because things that call .once() and such also pause
 
 			$(rTim).trigger( 'loopBegin', [rTim] );
-
-			// If calling the loop from the loop, just keep going in the same global direction
-			// Allows for stuff like `._play()` to show current word, then keep going
-			// console.log('before:', incrementors)
+    	    
+			// If, for example, calling the loop from the loop, just keep
+			// going in the same global direction. Allows for stuff like
+			// `._play()` to show current word, then keep going
 			incrementors = incrementors || rTim._incrementors;  // ??: Too indirect?
-			// console.log('after:', incrementors)
-			callback 	 = callback || rTim._loop;
-			debugger;
-			var frag 	 = rTim._queue.getFragment( incrementors );
+			var frag 	 = rTim._queue.getFragment( incrementors ),
+				skipDir  = rTim._skipDirection( incrementors, frag );  // -1, 0, or 1
 
-			// // What? Repeat the same operation? What if the operation is "skip 2" and we hit a paragraph
-			// // and just want to go to the next bit of text, not 2 more forward?
-			// // Should this be before the 'loopBegin' event? Outside of the loop happening in general?
-			// if ( rTim._shouldSkip(frag) ) {
-			// 	// ??: Still include 'loopFinish'?
-			// 	$(rTim).trigger( 'loopSkip', [rTim, frag] );
-			// 	var wordInc = 1;
-			// 	if ( incrementors[0] !== 0 ) { wordInc = signOf( incrementors[0] ) }
-			// 	rTim._loop( [0, 1], callback );
-			// }
-			// else {
+    	    if ( skipDir !== 0 ) {
 
+				$(rTim).trigger( 'loopSkip', [rTim, frag] );
+    	    	rTim._loop( [0, skipDir], justOnce );
+    	    
+    	    } else {
 
-				// TODO: Some way to prevent or alter delay that is more obvious
-				var delay = delayer.calcDelay( frag, Boolean(callback) );  // TODO: for fastforward, modify speed
-				rTim._timeoutID = setTimeout( callback, delay );
+				if ( !justOnce ) {
+					// How long this word will remain on the screen before changing
+					var delay = delayer.calcDelay( frag, justOnce );  // TODO: for fastforward, modify speed
+					rTim._timeoutID = setTimeout( rTim._loop, delay );
+				}
 
 				// Send fragment after setTimeout so that you can easily
 				// pause on "newWordFragment". Feels weird, though.
 				$(rTim).trigger( 'newWordFragment', [rTim, frag] );
 				$(rTim).trigger( 'loopFinish', [rTim] );
 
-
-
-			// }
+    	    }  // end if skip fragment or not skip fragment
 
 			// Finish if we're at the end of the text
 			if ( rTim._wordsDone() ) { return rTim; }
 
 			return rTim;  // Return timeout id instead?
-		};  // End rTim._loop()
-
+        };  // End rTim._loop()
 
 		rTim.once = function ( incrementors ) {
-		// Loop once in the given direction
-			rTim._loop( incrementors, function stopAfterOnce(){});  // function terminates loop
-			return rTim;
-		};
 
+			$(rTim).trigger( 'onceBegin', [rTim] );
+			rTim._loop( incrementors, true);
+			$(rTim).trigger( 'onceFinish', [rTim] );
+
+			return rTim;
+		};  // End rTim.once()
 
 
         // ============== DO IT ============== \\
