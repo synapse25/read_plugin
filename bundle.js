@@ -1436,7 +1436,7 @@ body {\
 // 	<button id="__rdly_fastforward_sentence" class="__rdly-playback-button"></button>\
 // </div>';
 
-		var rewindSentenceStr = '<button id="__rdly_rewind-sentence" class="__rdly-big-menu-button">Re</button>';
+		var rewindSentenceStr = '<button id="__rdly_rewind-sentence" class="__rdly-big-menu-button"><<</button>';
 
 
 
@@ -2015,13 +2015,13 @@ body {\
         rTim._skipDirection = function ( incrementors, frag ) {
 			var vector = [0, 0];
 
-			// Double new line characters don't work this way
-
 			var hasOnlyNewLines = false,
 				chars 			= frag.chars,  // Doesn't change frag.chars
 				noWhitespace 	= chars.replace(rTim._whitespaceRegex, '');
 
 
+			// If it's time to skip whitespace and there's nothing but whitespace
+			// in the fragment, figure out which direction to move in
 			if ( rTim._skipWhitespace && noWhitespace.length === 0 ) {
 
 				var senti = rTim._queue.position[0];
@@ -2059,8 +2059,9 @@ body {\
 			var frag 	 = rTim._queue.getFragment( incrementors ),
 				skipDir  = rTim._skipDirection( incrementors, frag );  // -1, 0, or 1
 
-			// !!! KEEP THIS even though it's not currently needed. I hope
-			// to make paragraphs their own sentences for reasons of accessibility
+			// !!! KEEP THIS even though it's not currently needed for sentences. I hope
+			// to make paragraphs their own sentences for reasons of accessibility.
+			// It's actually useful when navigating by word fragment.
     	    if ( skipDir[0] !== 0 || skipDir[1] !== 0 ) {
 
 				$(rTim).trigger( 'loopSkip', [rTim, frag] );
