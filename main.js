@@ -9,6 +9,7 @@
 * 	just text
 * - Add function "cleanHTML" to get rid of unwanted elements
 * - Remove html parsing from sbd node module
+* - Break this up into more descrete modules
 * 
 * WARNING:
 * Storage is all user settings. Too cumbersome otherwise for now.
@@ -19,22 +20,30 @@
 	// ============== SETUP ============== \\
 	var unfluff 	= require('@knod/unfluff'),
 		detect 		= require('detect-lang'),
+		$ 			= require('jquery');
+
+	// var Queue 		= require('./lib/Queue.js'),
+	var Words 		= require('./lib/parse/Words.js'),
+		WordNav 	= require('./lib/parse/WordNav.js'),
 		Storage 	= require('./lib/ReaderlyStorage.js'),
-		Timer 		= require('./lib/ReaderlyTimer.js'),
+		Delayer 	= require('./lib/playback/Delayer.js')
+		Timer 		= require('./lib/playback/ReaderlyTimer.js'),
 		Display 	= require('./lib/ReaderlyDisplay.js'),
-		Playback 	= require('./lib/playback/ReaderlyPlayback.js'),
+		Playback 	= require('./lib/playback/PlaybackUI.js'),
 		Settings 	= require('./lib/settings/ReaderlySettings.js'),
 		Speed 		= require('./lib/settings/SpeedSettings.js');
 
-	var queue, storage, timer, coreDisplay, playback, settings, speed;
+	var words, wordNav, storage, delayer, timer, coreDisplay, playback, settings, speed;
+	// var queue, storage, delayer, timer, coreDisplay, playback, settings, speed;
 
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new Timer( oldSettings, storage )
-		coreDisplay = new Display( timer ),
-		playback 	= new Playback( timer, coreDisplay ),
-		settings 	= new Settings( timer, coreDisplay ),
-		speed 		= new Speed( timer, settings );
+		delayer 	= new Delayer( oldSettings, storage );
+		timer 		= new Timer( delayer, oldSettings, storage );
+		coreDisplay = new Display( timer );
+		playback 	= new Playback( timer, wordNav, coreDisplay );
+		settings 	= new Settings( timer, coreDisplay );
+		speed 		= new Speed( delayer, settings );
 	};  // End afterLoadSettings()
 
 
@@ -44,7 +53,9 @@
 
 
 	var init = function () {
-		queue 	= new Queue();
+		// queue 	= new Queue();
+		words 	= new Words();
+		wordNav = new WordNav();
 		storage = new Storage();
 		storage.loadAll( afterLoadSettings );
 
@@ -59,32 +70,51 @@
 
 	// ============== RUNTIME ============== \\
 	var read = function ( text ) {
-		// TODO: If there's already a queue, start where we left off
-		queue.process( text );
-		timer.start( queue );
+		// TODO: If there's already a `words`, start where we left off
+		words.process( text );
+		wordNav.process( words );
+		timer.start( wordNav );
 		return true;
 	};
 
 
 	var cleanHTML = function ( $node ) {
+	// Remove unwanted nodes from the text
 		$node.find('sup').remove();
+		// These have English, skewing language detection results
 		$node.find('script').remove();
 		$node.find('style').remove();
 		return $node;
 	};
 
 
-	var smallSample = function ( $node ) {
-	// Get three sample paragraphs from around the middle of the page
-		var sample 	= '',
-			$ps 	= $node.find('p'),
-			numPs 	= $ps.length;
-		if ( $ps[0] ) {
-			var base = Math.floor(numPs/3);
-			sample += $($ps[base]).text();
-			sample += ' ' + $($ps[base * 2]).text();
-			sample += ' ' + $($ps[base * 3]).text();
+	var smallSample = function ( $node, halfSampleLength ) {
+	/* ( jQuery Node, [int] ) -> Str
+	* 
+	* Get a sample of the text (probably to use in detecting language)
+	* A hack for language detection for now until language detection
+	* is made lazy.
+	*/
+		var halfSampleLength = halfSampleLength || 500;
+
+		var text = $node.text();
+		text = text.replace(/\s\s+/g, ' ');
+
+		// Average letter length of an English word = ~5 characters + a space
+		var aproxNumWords 	= Math.floor(text.length/6),
+			halfNumWords 	= aproxNumWords/2;
+
+		// Want to get as close to 1k words as possible
+		var startingPoint, length;
+		if ( halfNumWords > halfSampleLength ) {
+			length = halfSampleLength;
+			startingPoint = halfNumWords - halfSampleLength;
+		} else {
+			length = text.length;
+			startingPoint = 0;
 		}
+
+		var sample = text.slice( startingPoint, length );
 
 		return sample;
 	};  // End smallSample()

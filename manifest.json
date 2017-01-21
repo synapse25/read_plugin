@@ -19,15 +19,6 @@
                 "lib/settings/noUi.css"
             ],
             "js": [
-                "jquery.js",
-                "jquery.nouislider.js",
-                "lib/Fragment.js",
-                "lib/Queue.js",
-                "lib/ReaderlyTimer.js",
-                "lib/ReaderlyDisplay.js",
-                "lib/playback/ReaderlyPlayback.js",
-                "lib/settings/ReaderlySettings.js",
-                "lib/settings/SpeedSettings.js",
 				"bundle.js"
             ],
             "matches": [
