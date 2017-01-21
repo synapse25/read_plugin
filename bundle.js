@@ -2057,7 +2057,7 @@ body {\
 			// `._play()` to show current word, then keep going
 			incrementors = incrementors || rTim._incrementors;  // ??: Too indirect?
 			var frag 	 = rTim._queue.getFragment( incrementors ),
-				skipDir  = rTim._skipDirection( incrementors, frag );  // -1, 0, or 1
+				skipDir  = rTim._skipDirection( incrementors, frag );  // [int, int] of -1, 0, or 1
 
 			// !!! KEEP THIS even though it's not currently needed for sentences. I hope
 			// to make paragraphs their own sentences for reasons of accessibility.
@@ -3349,17 +3349,38 @@ body {\
 	};
 
 
-	var smallSample = function ( $node ) {
-	// Get three sample paragraphs from around the middle of the page
-		var sample 	= '',
-			$ps 	= $node.find('p'),
-			numPs 	= $ps.length;
-		if ( $ps[0] ) {
-			var base = Math.floor(numPs/3);
-			sample += $($ps[base]).text();
-			sample += ' ' + $($ps[base * 2]).text();
-			sample += ' ' + $($ps[base * 3]).text();
+	var smallSample = function ( $node, halfSampleLength ) {
+	// // Get three sample paragraphs from around the middle of the page
+	// 	var sample 	= '',
+	// 		$ps 	= $node.find('p'),
+	// 		numPs 	= $ps.length;
+	// 	if ( $ps[0] ) {
+	// 		var base = Math.floor(numPs/3);
+	// 		sample += $($ps[base]).text();
+	// 		sample += ' ' + $($ps[base * 2]).text();
+	// 		sample += ' ' + $($ps[base * 3]).text();
+	// 	}
+		var halfSampleLength = halfSampleLength || 500;
+
+		var text = $node.text();
+		text = text.replace(/\s\s+/g, ' ');
+
+		// Average letter length of an English word = ~5 characters + a space
+		var aproxNumWords 	= Math.floor(text.length/6),
+			halfNumWords 	= aproxNumWords/2;
+
+		// Want to get as close to 1k words as possible
+		var startingPoint, length;
+		if ( halfNumWords > halfSampleLength ) {
+			length = halfSampleLength;
+			startingPoint = halfNumWords - halfSampleLength;
+		} else {
+			length = text.length;
+			startingPoint = 0;
 		}
+
+		var sample = text.slice( startingPoint, length );
+		console.log(JSON.stringify(sample));
 
 		return sample;
 	};  // End smallSample()

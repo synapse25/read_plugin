@@ -79,24 +79,42 @@
 
 
 	var cleanHTML = function ( $node ) {
+	// Remove unwanted nodes from the text
 		$node.find('sup').remove();
+		// These have English, skewing language detection results
 		$node.find('script').remove();
 		$node.find('style').remove();
 		return $node;
 	};
 
 
-	var smallSample = function ( $node ) {
-	// Get three sample paragraphs from around the middle of the page
-		var sample 	= '',
-			$ps 	= $node.find('p'),
-			numPs 	= $ps.length;
-		if ( $ps[0] ) {
-			var base = Math.floor(numPs/3);
-			sample += $($ps[base]).text();
-			sample += ' ' + $($ps[base * 2]).text();
-			sample += ' ' + $($ps[base * 3]).text();
+	var smallSample = function ( $node, halfSampleLength ) {
+	/* ( jQuery Node, [int] ) -> Str
+	* 
+	* Get a sample of the text (probably to use in detecting language)
+	* A hack for language detection for now until language detection
+	* is made lazy.
+	*/
+		var halfSampleLength = halfSampleLength || 500;
+
+		var text = $node.text();
+		text = text.replace(/\s\s+/g, ' ');
+
+		// Average letter length of an English word = ~5 characters + a space
+		var aproxNumWords 	= Math.floor(text.length/6),
+			halfNumWords 	= aproxNumWords/2;
+
+		// Want to get as close to 1k words as possible
+		var startingPoint, length;
+		if ( halfNumWords > halfSampleLength ) {
+			length = halfSampleLength;
+			startingPoint = halfNumWords - halfSampleLength;
+		} else {
+			length = text.length;
+			startingPoint = 0;
 		}
+
+		var sample = text.slice( startingPoint, length );
 
 		return sample;
 	};  // End smallSample()
