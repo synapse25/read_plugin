@@ -88,14 +88,14 @@
 	};
 
 
-	var smallSample = function ( $node, halfSampleLength ) {
+	var smallSample = function ( $node, desiredSampleLength ) {
 	/* ( jQuery Node, [int] ) -> Str
 	* 
 	* Get a sample of the text (probably to use in detecting language)
 	* A hack for language detection for now until language detection
 	* is made lazy.
 	*/
-		var halfSampleLength = halfSampleLength || 500;
+		var halfSampleLength = desiredSampleLength/2 || 500;
 
 		var text = $node.text();
 		text = text.replace(/\s\s+/g, ' ');
@@ -107,17 +107,19 @@
 		// Want to get as close to 1k words as possible
 		var startingPoint, length;
 		if ( halfNumWords > halfSampleLength ) {
-			length = halfSampleLength;
+			length = halfSampleLength * 2;
 			startingPoint = halfNumWords - halfSampleLength;
 		} else {
 			length = text.length;
 			startingPoint = 0;
 		}
 
-		var sample = text.slice( startingPoint, length );
+		var sample = text.slice( startingPoint, startingPoint + length );
 
 		return sample;
 	};  // End smallSample()
+
+
 
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {

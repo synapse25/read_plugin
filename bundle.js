@@ -1996,6 +1996,7 @@ body {\
 		// Returns `true` if we're at the end of the words
 
 			var progress = rTim.getProgress();
+			console.log(progress);
 			// TODO: Needs some work. Fragile.
 			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index, rTim.getLength()] );
 
@@ -3342,25 +3343,23 @@ body {\
 
 
 	var cleanHTML = function ( $node ) {
+	// Remove unwanted nodes from the text
 		$node.find('sup').remove();
+		// These have English, skewing language detection results
 		$node.find('script').remove();
 		$node.find('style').remove();
 		return $node;
 	};
 
 
-	var smallSample = function ( $node, halfSampleLength ) {
-	// // Get three sample paragraphs from around the middle of the page
-	// 	var sample 	= '',
-	// 		$ps 	= $node.find('p'),
-	// 		numPs 	= $ps.length;
-	// 	if ( $ps[0] ) {
-	// 		var base = Math.floor(numPs/3);
-	// 		sample += $($ps[base]).text();
-	// 		sample += ' ' + $($ps[base * 2]).text();
-	// 		sample += ' ' + $($ps[base * 3]).text();
-	// 	}
-		var halfSampleLength = halfSampleLength || 500;
+	var smallSample = function ( $node, desiredSampleLength ) {
+	/* ( jQuery Node, [int] ) -> Str
+	* 
+	* Get a sample of the text (probably to use in detecting language)
+	* A hack for language detection for now until language detection
+	* is made lazy.
+	*/
+		var halfSampleLength = desiredSampleLength/2 || 500;
 
 		var text = $node.text();
 		text = text.replace(/\s\s+/g, ' ');
@@ -3372,18 +3371,19 @@ body {\
 		// Want to get as close to 1k words as possible
 		var startingPoint, length;
 		if ( halfNumWords > halfSampleLength ) {
-			length = halfSampleLength;
+			length = halfSampleLength * 2;
 			startingPoint = halfNumWords - halfSampleLength;
 		} else {
 			length = text.length;
 			startingPoint = 0;
 		}
 
-		var sample = text.slice( startingPoint, length );
-		console.log(JSON.stringify(sample));
+		var sample = text.slice( startingPoint, startingPoint + length );
 
 		return sample;
 	};  // End smallSample()
+
+
 
 
 	chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
