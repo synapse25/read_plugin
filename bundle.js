@@ -1534,7 +1534,7 @@ body {\
 
 		rPUI._start = function () {
 			progressNode.noUiSlider.updateOptions({
-				range: { min: 0, max: timer.getLength() }
+				range: { min: 0, max: (timer.getLength() - 1) }
 			});
 			return rPUI;
 		}
@@ -1996,7 +1996,6 @@ body {\
 		// Returns `true` if we're at the end of the words
 
 			var progress = rTim.getProgress();
-			console.log(progress);
 			// TODO: Needs some work. Fragile.
 			$(rTim).trigger( 'progress', [rTim, progress, rTim._queue.index, rTim.getLength()] );
 
@@ -2058,8 +2057,6 @@ body {\
 			incrementors = incrementors || rTim._incrementors;  // ??: Too indirect?
 			var frag 	 = rTim._queue.getFragment( incrementors ),
 				skipDir  = rTim._skipDirection( incrementors, frag );  // [int, int] of -1, 0, or 1
-			console.log(frag)
-			console.log(rTim._queue.index, rTim._queue.getLength())
 
 			// !!! KEEP THIS even though it's not currently needed for sentences. I hope
 			// to make paragraphs their own sentences for reasons of accessibility.
