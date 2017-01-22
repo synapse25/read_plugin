@@ -998,7 +998,7 @@ body {\
         // ========== gets ========== \\
 
         wNav.getProgress = function () {
-            wNav._progress = wNav.index / positions.length;
+            wNav._progress = wNav.index / (positions.length - 1);
             return wNav._progress;
         };
 
@@ -2020,7 +2020,6 @@ body {\
 				chars 			= frag.chars,  // Doesn't change frag.chars
 				noWhitespace 	= chars.replace(rTim._whitespaceRegex, '');
 
-
 			// If it's time to skip whitespace and there's nothing but whitespace
 			// in the fragment, figure out which direction to move in
 			if ( rTim._skipWhitespace && noWhitespace.length === 0 ) {
@@ -2059,6 +2058,8 @@ body {\
 			incrementors = incrementors || rTim._incrementors;  // ??: Too indirect?
 			var frag 	 = rTim._queue.getFragment( incrementors ),
 				skipDir  = rTim._skipDirection( incrementors, frag );  // [int, int] of -1, 0, or 1
+			console.log(frag)
+			console.log(rTim._queue.index, rTim._queue.getLength())
 
 			// !!! KEEP THIS even though it's not currently needed for sentences. I hope
 			// to make paragraphs their own sentences for reasons of accessibility.
