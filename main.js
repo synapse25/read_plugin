@@ -29,10 +29,10 @@
 
 
 	var afterLoadSettings = function ( oldSettings ) {
-		timer 		= new Timer( oldSettings, storage )
-		coreDisplay = new Display( timer ),
-		playback 	= new Playback( timer, coreDisplay ),
-		settings 	= new Settings( timer, coreDisplay ),
+		timer 		= new Timer( oldSettings, storage );
+		coreDisplay = new Display( timer );
+		playback 	= new Playback( timer, coreDisplay );
+		settings 	= new Settings( timer, coreDisplay );
 		speed 		= new Speed( timer, settings );
 	};  // End afterLoadSettings()
 

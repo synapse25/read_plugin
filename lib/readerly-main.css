@@ -22,7 +22,8 @@
 	/* Cannot get rid of scrollbars while retaining scrolling */
 	/* http://stackoverflow.com/questions/3296644/hiding-the-scrollbar-on-an-html-page */
 	/* https://stackoverflow.com/questions/16670931/hide-scroll-bar-but-still-being-able-to-scroll */
-	/* very simple example of alternative: https://jsfiddle.net/fpd4fb80/1/ */
+	/* very simple example of alternative: https://jsfiddle.net/fpd4fb80/1/ (without iframe) */
+	/* example with iframe: https://jsfiddle.net/fpd4fb80/25/ */
 }
 html, body {
 	/* !!!! Not on the parent site please! !!!! */
