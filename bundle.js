@@ -482,7 +482,6 @@ if (debug) console.log('scrollable height:', scrollable.style.height)
 		rSto.set = function ( settings, callback ) {
 		// Set any number of settings values
 			// Docs say no args returned
-			console.log( settings)
 			chrome.storage.sync.set( settings, callback );
 			return rSto;
 		};  // End rSto.set()
@@ -1254,15 +1253,18 @@ body {\
 				longWordDelay 	= settings.longWordDelay 	|| defaultSettings.longWordDelay,
 				numericDelay 	= settings.numericDelay 	|| defaultSettings.numericDelay;
 
+			// !!!FOR DEBUGGING ONLY!!!
+			if ( false ) storage.clear()
+			
 			// Update settings based on what's passed in
 			_rSetts = rDel._settings = {};
 			rDel.set( 'wpm', 			wpm 			)
-				.set( 'slowstartdelay', slowStartDelay 	)
-				.set( 'sentencedelay', 	sentenceDelay 	)
-				.set( 'otherpuncdelay', otherPuncDelay 	)
-				.set( 'shortworddelay', shortWordDelay 	)
-				.set( 'longworddelay', 	longWordDelay 	)
-				.set( 'numericdelay', 	numericDelay 	);
+				.set( 'slowStartDelay', slowStartDelay 	)
+				.set( 'sentenceDelay', 	sentenceDelay 	)
+				.set( 'otherPuncDelay', otherPuncDelay 	)
+				.set( 'shortWordDelay', shortWordDelay 	)
+				.set( 'longWordDelay', 	longWordDelay 	)
+				.set( 'numericDelay', 	numericDelay 	);
 
 			return rDel;
 		};  // End rDel._init()
@@ -1314,17 +1316,22 @@ body {\
 		rDel.settingsAvailable = ['wpm', 'sentenceDelay', 'otherPuncDelay', 'shortWordDelay',
 						'longWordDelay', 'numericDelay', 'slowStartDelay'];
 
-		rDel.set = function ( operation, value) {
+		rDel.set = function ( settingName, value) {
 			// If we just go off of lowercase, we can remove at
 			// least some typo mistakes and uncertainties
-			var name 	= operation.toLowerCase(),
-				op 		= '_set' + name,
-				val 	= rDel[ op ]( value );
+			var op = '_set' + settingName;
+			if ( !rDel[ op ] ) {
+				console.error('There is no approved setting by the name of "' + operation + '". Maybe check your capitalization. Also, you can check `yourDelayerObj.settingsAvailable` to see what setting names are available to you.');
+				return false;
+			}
+			
+			// The value after it has been normalized
+			var val = rDel[ op ]( value );
 
 			// Create object for data so we can use the value of `op` as a key
 			// instead of the literal word "op"
-			var toSave 		= {};
-			toSave[ name ] 	= val;
+			var toSave 				= {};
+			toSave[ settingName ] 	= val;
 			storage.set( toSave );  // Should this be all lowercase too?
 
 			return rDel;
@@ -1351,27 +1358,27 @@ body {\
 		};
 
 		// ??: What do these numbers mean? It's not milliseconds, that's for sure.
-		rDel._setslowstartdelay = function ( val ) {
+		rDel._setslowStartDelay = function ( val ) {
 			_rSetts.slowStartDelay = rDel._toUsefulVal( val, 0, 10 );
 			return _rSetts.slowStartDelay;
 		};
-		rDel._setsentencedelay = function ( val ) {
+		rDel._setsentenceDelay = function ( val ) {
 			_rSetts.sentenceDelay = rDel._toUsefulVal( val, 1, 10 );
 			return _rSetts.sentenceDelay;
 		};
-		rDel._setotherpuncdelay = function ( val ) {
+		rDel._setotherPuncDelay = function ( val ) {
 			_rSetts.otherPuncDelay = rDel._toUsefulVal( val, 1, 10 );
 			return _rSetts.otherPuncDelay;
 		};
-		rDel._setshortworddelay = function ( val ) {
+		rDel._setshortWordDelay = function ( val ) {
 			_rSetts.shortWordDelay = rDel._toUsefulVal( val, 1, 10 );
 			return _rSetts.shortWordDelay;
 		};
-		rDel._setlongworddelay = function ( val ) {
+		rDel._setlongWordDelay = function ( val ) {
 			_rSetts.longWordDelay = rDel._toUsefulVal( val, 1, 10 );
 			return _rSetts.longWordDelay;
 		};
-		rDel._setnumericdelay = function ( val ) {
+		rDel._setnumericDelay = function ( val ) {
 			_rSetts.numericDelay = rDel._toUsefulVal( val, 1, 10 );
 			return _rSetts.numericDelay;
 		};
@@ -2672,7 +2679,7 @@ body {\
 				step: 		25,
 				inputNode: 	nodes.wpmInput,
 				resolution: 1,
-				operation: 	'WPM'
+				operation: 	'wpm'
 			});
 
 			slider({
