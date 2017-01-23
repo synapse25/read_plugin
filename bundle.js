@@ -293,7 +293,7 @@
 		// iframe element sizing
 		// https://jsfiddle.net/fpd4fb80/31/
 		rDis._sizeIframeAndContents = function () {
-			var debug = true;
+			var debug = false;
 if (debug) console.log('~~~~~~~~~~~~~~~~~~~~')
 			// There should only be one (for now...)
 			var grower = $(readerly).find('.__rdly-to-grow')[0];
@@ -482,6 +482,7 @@ if (debug) console.log('scrollable height:', scrollable.style.height)
 		rSto.set = function ( settings, callback ) {
 		// Set any number of settings values
 			// Docs say no args returned
+			console.log( settings)
 			chrome.storage.sync.set( settings, callback );
 			return rSto;
 		};  // End rSto.set()
@@ -1316,9 +1317,15 @@ body {\
 		rDel.set = function ( operation, value) {
 			// If we just go off of lowercase, we can remove at
 			// least some typo mistakes and uncertainties
-			var op 	= '_set' + operation.toLowerCase();
-			var val = rDel[ op ]( value );
-			storage.set( { operation: val } );  // Should this be all lowercase too?
+			var name 	= operation.toLowerCase(),
+				op 		= '_set' + name,
+				val 	= rDel[ op ]( value );
+
+			// Create object for data so we can use the value of `op` as a key
+			// instead of the literal word "op"
+			var toSave 		= {};
+			toSave[ name ] 	= val;
+			storage.set( toSave );  // Should this be all lowercase too?
 
 			return rDel;
 		};  // End rDel.set()
