@@ -36,6 +36,10 @@ When you encounter a period, question mark, exclamation point or other punctuati
 
 The tool also gives an additional pause between paragraphs to help contextualize and process information as you read it.
 
+#### Issues
+
+If you find a bug or want to suggest a new feature, please log an issue [over here](https://github.com/knod/read_plugin/issues). We welcome pull requests!
+
 #### License
 
 Unless stated otherwise, everything in this repository is dedicated to the public domain through the [Creative Commons Zero license - zero rights reserved](http://creativecommons.org/publicdomain/zero/1.0/).
